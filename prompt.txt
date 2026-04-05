@@ -1,0 +1,344 @@
+Tu es un expert senior en architecture logicielle, développement full-stack moderne et UX/UI design. Ta mission est de concevoir une application web complète, scalable et professionnelle pour une agence immobilière spécialisée dans la location courte durée (type Airbnb).
+
+
+
+
+
+🎯 Objectif du projet
+
+
+
+
+
+Créer une plateforme web permettant :
+
+
+
+La recherche avancée de biens (gîtes, appartements, studios, villas, espaces, etc.)
+La réservation en ligne selon disponibilité (par nuit ou période)
+La gestion complète des annonces
+Une expérience utilisateur fluide, rapide et moderne
+
+
+
+
+
+
+
+
+
+
+🧱 Stack technique imposée
+
+
+
+
+
+Frontend : Next.js (App Router recommandé)
+Backend : API routes Next.js ou architecture séparée (Node.js)
+Base de données : MongoDB (avec Mongoose ou Prisma)
+Authentification : système simple (email + mot de passe, option OAuth)
+Paiement :
+Virement bancaire (manuel avec validation admin)
+PayPal (intégration API)
+
+Email : système d’envoi automatique (confirmation, notifications, etc.)
+
+
+
+
+
+
+
+
+
+
+🧩 Fonctionnalités principales
+
+
+
+
+
+
+
+👤 Utilisateurs
+
+
+
+
+
+Inscription / Connexion simplifiée
+Profil utilisateur (infos personnelles, historique de réservation)
+Réinitialisation de mot de passe
+
+
+
+
+
+
+🔎 Recherche & filtres (moteur avancé)
+
+
+
+
+
+Recherche par :
+Localisation
+Prix (min/max)
+Type de bien
+Nombre de chambres
+Capacité (personnes)
+Équipements (WiFi, piscine, climatisation, etc.)
+Disponibilité (dates)
+
+Tri :
+Prix
+Popularité
+Nouveautés
+
+Carte interactive (optionnel mais recommandé)
+
+
+
+
+
+
+🏠 Annonces
+
+
+
+
+
+Création d’annonce (admin ou propriétaire)
+Galerie d’images
+Description détaillée
+Disponibilités (calendrier dynamique)
+Tarification par nuit
+Avis & notes (optionnel mais recommandé)
+
+
+
+
+
+
+📅 Réservation
+
+
+
+
+
+Sélection des dates
+Vérification de disponibilité en temps réel
+Calcul automatique du prix total
+Demande de réservation ou confirmation instantanée
+Statuts :
+En attente
+Confirmée
+Annulée
+
+
+
+
+
+
+
+💳 Paiement
+
+
+
+
+
+Choix du mode de paiement :
+PayPal (automatisé)
+Virement bancaire (instructions + validation manuelle)
+
+Gestion des statuts de paiement
+
+
+
+
+
+
+📧 Emails automatiques
+
+
+
+
+
+Confirmation de compte
+Confirmation de réservation
+Notifications (annulation, paiement, etc.)
+
+
+
+
+
+
+
+
+
+
+🛠️ Back-office (admin)
+
+
+
+
+
+Dashboard
+Gestion des utilisateurs
+Gestion des annonces
+Gestion des réservations
+Validation des paiements (virement)
+Statistiques (optionnel)
+
+
+
+
+
+
+
+
+
+
+🧠 Architecture attendue
+
+
+
+
+
+
+
+Backend
+
+
+
+
+
+API REST ou GraphQL
+Séparation logique :
+Auth
+Users
+Listings (annonces)
+Bookings (réservations)
+Payments
+
+Middleware :
+Authentification
+Validation
+Gestion des erreurs
+
+
+
+
+
+
+
+Base de données (MongoDB)
+
+
+
+
+
+Concevoir les modèles :
+
+
+
+User
+Listing
+Booking
+Payment
+Review (optionnel)
+
+
+
+
+Avec relations et champs optimisés.
+
+
+
+
+
+
+
+
+
+🎨 UI/UX
+
+
+
+
+
+Design moderne, épuré et responsive
+Expérience fluide type Airbnb
+Pages principales :
+Homepage
+Résultats de recherche
+Détail d’annonce
+Réservation
+Dashboard utilisateur
+
+Optimisation mobile obligatoire
+
+
+
+
+
+
+
+
+
+
+⚙️ Performance & bonnes pratiques
+
+
+
+
+
+SEO optimisé (Next.js)
+Lazy loading images
+Caching
+Sécurité (JWT, hashing mot de passe, validation)
+Scalabilité (structure modulaire)
+
+
+
+
+
+
+
+
+
+
+🚀 Livrables attendus
+
+
+
+
+
+Architecture complète du projet (dossiers + structure)
+Schéma de base de données détaillé
+Description des API endpoints
+Workflow utilisateur (de la recherche à la réservation)
+Intégration paiement (PayPal + virement)
+Plan UI/UX (pages + composants)
+Conseils pour déploiement (Vercel, MongoDB Atlas, etc.)
+
+
+
+
+
+
+
+
+
+
+⚠️ Contraintes
+
+
+
+
+
+Code maintenable et propre
+Modularité maximale
+Facilité d’évolution (ajout futur de fonctionnalités)
+Bonne expérience utilisateur prioritaire
