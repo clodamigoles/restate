@@ -8,7 +8,8 @@ export const config = {
   api: { bodyParser: false },
 };
 
-const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024; // 5 MB
+// Images are compressed client-side before upload — keep a generous safety limit
+const MAX_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 20 * 1024 * 1024; // 20 MB
 
 async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,7 +19,7 @@ async function handler(req, res) {
   const form = formidable({
     keepExtensions: true,
     maxFileSize: MAX_SIZE,
-    maxFiles: 10,
+    maxFiles: 100,
   });
 
   const [, files] = await form.parse(req);

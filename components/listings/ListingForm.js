@@ -13,6 +13,72 @@ import { SUPPORTED_LOCALES, createLocalizedField } from '@/lib/i18n';
 import { SUPPORTED_CURRENCIES } from '@/lib/currencies';
 import { Upload, X, Loader2, Globe } from 'lucide-react';
 
+// ─── Image utilities ───────────────────────────────────────────────────────
+
+/** Compress + resize an image to max 1920 px, JPEG 82% quality */
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX = 1920;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width >= height) { height = Math.round((height / width) * MAX); width = MAX; }
+        else { width = Math.round((width / height) * MAX); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return reject(new Error('Compression échouée'));
+          resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        0.82,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(file.name)); };
+    img.src = objectUrl;
+  });
+}
+
+/** Upload a single file to /api/upload, return the public URL */
+async function uploadSingle(file) {
+  const fd = new FormData();
+  fd.append('images', file);
+  const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+  return data.url;
+}
+
+/**
+ * Run an array of async task factories with a max concurrency.
+ * Returns an array of { status, value } | { status, reason } (same shape as Promise.allSettled).
+ */
+async function withConcurrency(tasks, limit) {
+  const results = new Array(tasks.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < tasks.length) {
+      const idx = next++;
+      try { results[idx] = { status: 'fulfilled', value: await tasks[idx]() }; }
+      catch (e) { results[idx] = { status: 'rejected', reason: e }; }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+
 const LOCALE_NAMES = {
   fr: 'Francais', en: 'English', de: 'Deutsch',
   es: 'Espanol', it: 'Italiano', pt: 'Portugues', nl: 'Nederlands',
@@ -88,29 +154,54 @@ export default function ListingForm({ initial = {} }) {
 
   // Image upload
   const [uploading, setUploading] = useState(false);
-  const handleImageUpload = async (files) => {
+  const [uploadProgress, setUploadProgress] = useState(null); // { total, done, errors }
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleImageUpload = async (rawFiles) => {
+    const files = Array.from(rawFiles).filter((f) => f.type.startsWith('image/'));
+    if (!files.length) return;
+
     setUploading(true);
     setError('');
-    try {
-      const fd = new FormData();
-      for (const file of files) {
-        fd.append('images', file);
+    setUploadProgress({ total: files.length, done: 0, errors: 0 });
+
+    // Step 1 – compress all images in parallel
+    const compressed = await Promise.all(
+      files.map((f) => compressImage(f).catch(() => null))
+    );
+    const valid = compressed.filter(Boolean);
+
+    // Step 2 – upload with concurrency = 5, update counter after each
+    let done = 0;
+    let errors = 0;
+    const urls = [];
+
+    const tasks = valid.map((file) => async () => {
+      try {
+        const url = await uploadSingle(file);
+        urls.push(url);
+      } catch {
+        errors++;
+      } finally {
+        done++;
+        setUploadProgress({ total: files.length, done, errors });
       }
-      const res = await fetch('/api/upload', { method: 'POST', body: fd, credentials: 'include' });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || `Erreur upload (${res.status})`);
-        return;
-      }
-      if (data.data?.length) {
-        set('images', [...form.images, ...data.data]);
-      } else if (data.url) {
-        set('images', [...form.images, data.url]);
-      }
-    } catch (e) {
-      setError("Erreur lors de l'upload des images : " + e.message);
-    } finally {
-      setUploading(false);
+    });
+
+    await withConcurrency(tasks, 5);
+
+    if (urls.length) set('images', [...form.images, ...urls]);
+    if (errors > 0) setError(`${errors} image${errors > 1 ? 's' : ''} n'ont pas pu être uploadées.`);
+
+    setUploading(false);
+    setUploadProgress(null);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!uploading && e.dataTransfer.files?.length) {
+      handleImageUpload(e.dataTransfer.files);
     }
   };
 
@@ -422,30 +513,60 @@ export default function ListingForm({ initial = {} }) {
       <section className="rounded-xl border bg-card p-5">
         <h2 className="text-base font-semibold mb-4">Images</h2>
 
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border py-8 transition-colors hover:border-primary/50 hover:bg-muted/30">
+        <label
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed py-8 transition-colors ${
+            isDragging
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-primary/50 hover:bg-muted/30'
+          }`}
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+        >
           {uploading ? (
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <>
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <span className="text-sm font-medium text-primary">
+                {uploadProgress
+                  ? `Upload ${uploadProgress.done} / ${uploadProgress.total}…`
+                  : 'Compression…'}
+              </span>
+              {uploadProgress && uploadProgress.total > 1 && (
+                <div className="mx-auto mt-1 h-1.5 w-48 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-300"
+                    style={{ width: `${(uploadProgress.done / uploadProgress.total) * 100}%` }}
+                  />
+                </div>
+              )}
+            </>
           ) : (
-            <Upload className="h-6 w-6 text-muted-foreground" />
+            <>
+              <Upload className="h-6 w-6 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {isDragging ? 'Relâcher pour ajouter' : 'Cliquer ou glisser des images'}
+              </span>
+              <span className="text-xs text-muted-foreground/60">
+                Tous formats — toutes tailles — nombre illimité
+              </span>
+            </>
           )}
-          <span className="text-sm text-muted-foreground">
-            {uploading ? 'Upload en cours...' : 'Cliquer ou glisser des images'}
-          </span>
           <input
             type="file"
             multiple
             accept="image/*"
             className="hidden"
             disabled={uploading}
-            onChange={(e) => e.target.files?.length && handleImageUpload(Array.from(e.target.files))}
+            onChange={(e) => e.target.files?.length && handleImageUpload(e.target.files)}
           />
         </label>
 
         {form.images.length > 0 && (
           <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
             {form.images.map((url, i) => (
-              <div key={i} className="group relative aspect-square overflow-hidden rounded-lg bg-muted">
-                <img src={url} alt="" className="h-full w-full object-cover" />
+              <div key={url + i} className="group relative aspect-square overflow-hidden rounded-lg bg-muted">
+                <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
                 {i === 0 && (
                   <span className="absolute left-1 top-1 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
                     Cover
@@ -461,6 +582,11 @@ export default function ListingForm({ initial = {} }) {
               </div>
             ))}
           </div>
+        )}
+        {form.images.length > 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {form.images.length} image{form.images.length > 1 ? 's' : ''} — la première est la photo de couverture
+          </p>
         )}
       </section>
 
