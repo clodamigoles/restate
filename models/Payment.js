@@ -34,6 +34,7 @@ const PaymentSchema = new mongoose.Schema(
     // Virement bancaire
     transferReference: String,
     transferProof: String,
+    transferProofs: [String],
     // Validation admin
     validatedBy: {
       type: mongoose.Schema.Types.ObjectId,

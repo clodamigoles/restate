@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -39,7 +40,17 @@ export default function RegisterPage() {
       return setError(data.error);
     }
 
-    router.push('/auth/login?registered=1');
+    const result = await signIn('credentials', {
+      redirect: false,
+      email: form.email,
+      password: form.password,
+    });
+
+    if (result?.error) {
+      router.push('/auth/login?registered=1');
+    } else {
+      router.push('/');
+    }
   }
 
   return (

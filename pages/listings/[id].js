@@ -1,18 +1,68 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import dbConnect from '@/lib/db';
 import Listing from '@/models/Listing';
 import ListingGallery from '@/components/listings/ListingGallery';
+import AvailabilityCalendar from '@/components/bookings/AvailabilityCalendar';
 import { Button } from '@/components/ui/Button';
+import AuthModal from '@/components/auth/AuthModal';
 import { formatPrice, PROPERTY_TYPE_LABELS, AMENITY_LABELS, getLabel } from '@/lib/constants';
 import { getLocalizedField } from '@/lib/i18n';
 import {
   MapPin, Users, BedDouble, Bath, Clock, Wifi, Star,
-  CheckCircle2, ChevronRight,
+  CheckCircle2, ChevronRight, CalendarDays,
+  UtensilsCrossed, CarFront, Tv, Snowflake, Flame,
+  Laptop, WashingMachine, Wind, Refrigerator, Microwave,
+  Beef, Coffee, Waves, Droplets, TreePine, Fence,
+  Bike, Dumbbell, Eye, Mountain, Accessibility,
+  ArrowUpDown, Zap, Baby, Armchair, FerrisWheel,
+  Heart, ShieldCheck, PawPrint, Ban, Cigarette, CircleOff,
 } from 'lucide-react';
+
+const AMENITY_ICONS = {
+  wifi: Wifi,
+  kitchen: UtensilsCrossed,
+  parking: CarFront,
+  tv: Tv,
+  air_conditioning: Snowflake,
+  heating: Flame,
+  workspace: Laptop,
+  dishwasher: WashingMachine,
+  fridge: Refrigerator,
+  microwave: Microwave,
+  bbq: Beef,
+  breakfast: Coffee,
+  pool: Waves,
+  private_pool: Droplets,
+  garden: TreePine,
+  balcony: Wind,
+  fenced: Fence,
+  bike_rental: Bike,
+  hot_tub: Droplets,
+  sauna: Flame,
+  gym: Dumbbell,
+  fireplace: Flame,
+  washer: WashingMachine,
+  dryer: Wind,
+  sea_view: Eye,
+  lake_view: Eye,
+  mountain_view: Mountain,
+  wheelchair_accessible: Accessibility,
+  elevator: ArrowUpDown,
+  ev_charger: Zap,
+  cot: Baby,
+  high_chair: Armchair,
+  playground: FerrisWheel,
+  family_friendly: Heart,
+  childcare: ShieldCheck,
+  pets_allowed: PawPrint,
+  no_pets: Ban,
+  smoking_allowed: Cigarette,
+  non_smoking: CircleOff,
+};
 
 export default function ListingDetailPage({ listing }) {
   const { data: session } = useSession();
@@ -23,6 +73,37 @@ export default function ListingDetailPage({ listing }) {
   const [guests, setGuests] = useState(1);
   const [bookingError, setBookingError] = useState('');
   const [booking, setBooking] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarRange, setCalendarRange] = useState({ from: undefined, to: undefined });
+
+  // Plages bloquées localement après une réservation réussie (mise à jour optimiste)
+  const [extraDisabledRanges, setExtraDisabledRanges] = useState([]);
+
+  const calendarRef = useRef(null);
+
+  const pendingBookRef = useRef(false);
+
+  useEffect(() => {
+    if (session && pendingBookRef.current) {
+      pendingBookRef.current = false;
+      submitBooking();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Fermer le calendrier en cliquant à l'extérieur
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (calendarRef.current && !calendarRef.current.contains(e.target)) {
+        setShowCalendar(false);
+      }
+    }
+    if (showCalendar) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCalendar]);
 
   if (!listing) return null;
 
@@ -34,10 +115,29 @@ export default function ListingDetailPage({ listing }) {
   const cleaning = listing.cleaningFee || 0;
   const total = subtotal + cleaning;
 
-  async function handleBook(e) {
-    e.preventDefault();
+  function formatDate(iso) {
+    if (!iso) return null;
+    return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function handleCalendarSelect(from, to) {
+    setCheckIn(from.toISOString().split('T')[0]);
+    setCheckOut(to.toISOString().split('T')[0]);
     setBookingError('');
-    if (!session) return router.push('/auth/login?callbackUrl=' + router.asPath);
+    setShowCalendar(false);
+  }
+
+  function handleOpenCalendar() {
+    // Réinitialiser pour recommencer la sélection
+    setCalendarRange({ from: undefined, to: undefined });
+    setCheckIn('');
+    setCheckOut('');
+    setBookingError('');
+    setShowCalendar(true);
+  }
+
+  async function submitBooking() {
+    setBookingError('');
     if (guests > listing.capacity) {
       return setBookingError(`Capacité maximale : ${listing.capacity} personnes`);
     }
@@ -50,13 +150,38 @@ export default function ListingDetailPage({ listing }) {
     const data = await res.json();
     setBooking(false);
     if (!data.success) return setBookingError(data.error);
+
+    // Mise à jour optimiste du calendrier avant la redirection
+    setExtraDisabledRanges((prev) => [
+      ...prev,
+      { from: new Date(checkIn), to: new Date(checkOut) },
+    ]);
+
     router.push(`/bookings/${data.data._id}`);
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  function handleBook(e) {
+    e.preventDefault();
+    if (!checkIn || !checkOut) return setBookingError('Sélectionnez vos dates dans le calendrier');
+    if (!session) {
+      pendingBookRef.current = true;
+      setShowAuthModal(true);
+      return;
+    }
+    submitBooking();
+  }
 
   return (
     <>
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={(open) => {
+          setShowAuthModal(open);
+          if (!open) pendingBookRef.current = false;
+        }}
+        onSuccess={() => setShowAuthModal(false)}
+        title="Connectez-vous pour finaliser votre réservation"
+      />
       <Head>
         <title>{getLocalizedField(listing.title)} — Restate</title>
         <meta name="description" content={getLocalizedField(listing.description)?.slice(0, 155)} />
@@ -74,10 +199,10 @@ export default function ListingDetailPage({ listing }) {
         <h1 className="text-2xl font-bold sm:text-3xl">{getLocalizedField(listing.title)}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           {listing.averageRating > 0 && (
-            <span className="flex items-center gap-1 text-foreground font-medium">
+            <span className="flex items-center gap-1 font-medium text-foreground">
               <Star className="h-4 w-4 fill-primary text-primary" />
               {listing.averageRating.toFixed(1)}
-              <span className="text-muted-foreground font-normal">({listing.reviewCount} avis)</span>
+              <span className="font-normal text-muted-foreground">({listing.reviewCount} avis)</span>
             </span>
           )}
           <span className="flex items-center gap-1">
@@ -95,9 +220,9 @@ export default function ListingDetailPage({ listing }) {
         {/* Corps */}
         <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Infos principales */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8 lg:col-span-2">
             {/* Caractéristiques */}
-            <div className="flex flex-wrap gap-4 pb-6 border-b">
+            <div className="flex flex-wrap gap-3 border-b pb-6">
               <Spec icon={<Users />} label={`${listing.capacity} voyageurs`} />
               <Spec icon={<BedDouble />} label={`${listing.bedrooms} chambre${listing.bedrooms > 1 ? 's' : ''}`} />
               <Spec icon={<Bath />} label={`${listing.bathrooms} sdb`} />
@@ -111,7 +236,7 @@ export default function ListingDetailPage({ listing }) {
             {/* Description */}
             <div>
               <h2 className="text-xl font-semibold">Description</h2>
-              <p className="mt-3 whitespace-pre-line text-muted-foreground leading-relaxed">
+              <p className="mt-3 whitespace-pre-line leading-relaxed text-muted-foreground">
                 {getLocalizedField(listing.description)}
               </p>
             </div>
@@ -121,12 +246,17 @@ export default function ListingDetailPage({ listing }) {
               <div className="border-t pt-6">
                 <h2 className="text-xl font-semibold">Équipements</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {listing.amenities.map((a) => (
-                    <div key={a} className="flex items-center gap-2 text-sm">
-                      <Wifi className="h-4 w-4 text-muted-foreground" />
-                      {getLabel(AMENITY_LABELS, a)}
-                    </div>
-                  ))}
+                  {listing.amenities.map((a) => {
+                    const Icon = AMENITY_ICONS[a];
+                    return (
+                      <div key={a} className="flex items-center gap-2.5 text-sm">
+                        {Icon
+                          ? <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          : <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground" />}
+                        {getLabel(AMENITY_LABELS, a)}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -134,8 +264,8 @@ export default function ListingDetailPage({ listing }) {
             {/* Règles */}
             {getLocalizedField(listing.rules) && (
               <div className="border-t pt-6">
-                <h2 className="text-xl font-semibold">Regles de la maison</h2>
-                <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground leading-relaxed">
+                <h2 className="text-xl font-semibold">Règles de la maison</h2>
+                <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                   {getLocalizedField(listing.rules)}
                 </p>
               </div>
@@ -153,40 +283,55 @@ export default function ListingDetailPage({ listing }) {
 
           {/* Formulaire de réservation */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 rounded-xl border p-6 shadow-sm">
-              <div className="mb-4 flex items-baseline gap-1">
+            <div id="booking-sidebar" className="sticky top-24 rounded-xl border p-6 shadow-sm">
+              <div className="mb-5 flex items-baseline gap-1">
                 <span className="text-2xl font-bold text-primary">{formatPrice(listing.pricePerNight)}</span>
                 <span className="text-muted-foreground">/ nuit</span>
               </div>
 
               <form onSubmit={handleBook} className="space-y-3">
-                <div className="grid grid-cols-2 overflow-hidden rounded-lg border">
-                  <div className="p-3 border-r">
-                    <p className="text-xs font-semibold uppercase tracking-wide">Arrivée</p>
-                    <input
-                      type="date"
-                      value={checkIn}
-                      min={today}
-                      onChange={(e) => { setCheckIn(e.target.value); if (checkOut <= e.target.value) setCheckOut(''); }}
-                      className="mt-1 w-full bg-transparent text-sm focus:outline-none"
-                      required
-                    />
+                {/* Dates — cliquables pour ouvrir le calendrier */}
+                <div className="relative" ref={calendarRef}>
+                  <div
+                    className={`grid cursor-pointer grid-cols-2 overflow-hidden rounded-lg border transition-colors ${showCalendar ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary'}`}
+                    onClick={handleOpenCalendar}
+                  >
+                    <div className={`border-r p-3 ${showCalendar && !calendarRange.from ? 'bg-primary/5' : ''}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Arrivée</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        {checkIn
+                          ? new Date(checkIn).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                          : <span className="text-muted-foreground">Choisir</span>}
+                      </p>
+                    </div>
+                    <div className={`p-3 ${showCalendar && calendarRange.from && !calendarRange.to ? 'bg-primary/5' : ''}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Départ</p>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        {checkOut
+                          ? new Date(checkOut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+                          : <span className="text-muted-foreground">Choisir</span>}
+                      </p>
+                    </div>
                   </div>
-                  <div className="p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide">Départ</p>
-                    <input
-                      type="date"
-                      value={checkOut}
-                      min={checkIn || today}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="mt-1 w-full bg-transparent text-sm focus:outline-none"
-                      required
-                    />
-                  </div>
+
+                  {showCalendar && (
+                    <div className="absolute left-0 right-0 z-50 mt-2 lg:left-auto lg:right-0 lg:w-max">
+                      <AvailabilityCalendar
+                        listingId={listing._id}
+                        onRangeSelect={handleCalendarSelect}
+                        numberOfMonths={1}
+                        extraDisabledRanges={extraDisabledRanges}
+                        range={calendarRange}
+                        onRangeChange={setCalendarRange}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide">Voyageurs</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Voyageurs</p>
                   <input
                     type="number"
                     value={guests}
@@ -220,8 +365,8 @@ export default function ListingDetailPage({ listing }) {
                   </div>
                 )}
 
-                <Button type="submit" className="w-full" disabled={booking}>
-                  {booking ? 'Réservation...' : session ? 'Réserver' : 'Se connecter pour réserver'}
+                <Button type="submit" className="w-full" disabled={booking || !checkIn || !checkOut}>
+                  {booking ? 'Réservation en cours…' : 'Réserver'}
                 </Button>
               </form>
             </div>
@@ -234,15 +379,16 @@ export default function ListingDetailPage({ listing }) {
 
 function Spec({ icon, label }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <span className="h-4 w-4">{icon}</span>
-      {label}
+    <div className="flex items-center gap-3 rounded-full border px-5 py-2 text-sm text-muted-foreground">
+      <span className="h-4 w-4 shrink-0">{icon}</span>
+      <span>{label}</span>
     </div>
   );
 }
 
 export async function getServerSideProps({ params }) {
   await dbConnect();
+  await import('@/models/User');
 
   const { id } = params;
   const mongoose = (await import('mongoose')).default;

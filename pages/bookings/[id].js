@@ -2,7 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import { format } from 'date-fns';
@@ -13,11 +13,12 @@ import PaymentMethodSelect from '@/components/payments/PaymentMethodSelect';
 import PaymentStatusBadge from '@/components/payments/PaymentStatusBadge';
 import BankTransferInfo from '@/components/payments/BankTransferInfo';
 import { Button } from '@/components/ui/Button';
-import { MapPin, ChevronRight, Clock } from 'lucide-react';
+import { MapPin, ChevronRight, Clock, Download } from 'lucide-react';
 import { usePayPalScriptReducer } from '@paypal/react-paypal-js';
 
 // Chargé côté client uniquement (dépendance PayPal)
 const PayPalButton = dynamic(() => import('@/components/payments/PayPalButton'), { ssr: false });
+const QRCodeCanvas = dynamic(() => import('qrcode.react').then((m) => m.QRCodeCanvas), { ssr: false });
 
 const fetcher = (url) => fetch(url).then((r) => r.json());
 
@@ -37,6 +38,17 @@ export default function BookingDetailPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
 
   const booking = data?.data;
+
+  // Récupère les détails bancaires + récipissés si virement en attente (ex: après rechargement)
+  const isPendingTransfer = booking?.paymentStatus === 'pending';
+  const { data: paymentData } = useSWR(
+    isPendingTransfer && !bankDetails && id ? `/api/bookings/${id}/payment` : null,
+    fetcher,
+  );
+
+  // bankDetails vient soit de l'initiation en session, soit du fetch après rechargement
+  const resolvedBankDetails = bankDetails || paymentData?.data?.bankDetails || null;
+  const resolvedProofs = paymentData?.data?.proofs || [];
 
   async function handleCancel() {
     if (!confirm('Êtes-vous sûr de vouloir annuler cette réservation ?')) return;
@@ -99,7 +111,8 @@ export default function BookingDetailPage() {
   const listing = booking.listing;
   const canCancel = ['pending', 'confirmed'].includes(booking.status);
   const needsPayment = booking.status !== 'cancelled' && booking.paymentStatus === 'unpaid';
-  const isPendingTransfer = booking.paymentStatus === 'pending';
+  const showBankTransferBlock =
+    booking.status !== 'cancelled' && booking.paymentStatus === 'pending';
 
   return (
     <>
@@ -160,7 +173,7 @@ export default function BookingDetailPage() {
               </div>
             </div>
 
-            {/* Section paiement */}
+            {/* Section paiement — choix du moyen */}
             {needsPayment && (
               <div className="rounded-xl border p-5 space-y-4">
                 <h2 className="text-lg font-semibold">Paiement</h2>
@@ -191,6 +204,7 @@ export default function BookingDetailPage() {
                         bankDetails={bankDetails}
                         onInitiate={initiateBankTransfer}
                         loading={bankLoading}
+                        bookingId={id}
                       />
                     )}
                   </>
@@ -198,13 +212,44 @@ export default function BookingDetailPage() {
               </div>
             )}
 
-            {/* Virement en attente de validation */}
-            {isPendingTransfer && (
-              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm">
-                <p className="font-medium text-warning">Virement en cours de validation</p>
-                <p className="mt-1 text-muted-foreground">
-                  Notre équipe vérifiera votre virement dans les 24–48h ouvrées.
-                </p>
+            {/* Virement en attente — sélecteur toujours visible + contenu selon choix */}
+            {showBankTransferBlock && (
+              <div className="rounded-xl border p-5 space-y-4">
+                <h2 className="text-lg font-semibold">Paiement</h2>
+
+                {paymentSuccess ? (
+                  <div className="rounded-lg border border-success/30 bg-success/5 p-4 text-sm">
+                    <p className="font-medium text-success">Paiement confirmé !</p>
+                    <p className="mt-1 text-muted-foreground">Votre réservation est confirmée.</p>
+                  </div>
+                ) : (
+                  <>
+                    <PaymentMethodSelect
+                      value={paymentMethod || 'bank_transfer'}
+                      onChange={(m) => { setPaymentMethod(m); setPaymentError(''); }}
+                    />
+
+                    {paymentError && <p className="text-sm text-destructive">{paymentError}</p>}
+
+                    {(!paymentMethod || paymentMethod === 'bank_transfer') && (
+                      <BankTransferInfo
+                        bankDetails={resolvedBankDetails}
+                        onInitiate={null}
+                        loading={false}
+                        bookingId={id}
+                        initialProofs={resolvedProofs}
+                      />
+                    )}
+
+                    {paymentMethod === 'paypal' && (
+                      <PayPalButton
+                        bookingId={id}
+                        onSuccess={() => { setPaymentSuccess(true); mutate(); }}
+                        onError={(e) => setPaymentError(e)}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             )}
 

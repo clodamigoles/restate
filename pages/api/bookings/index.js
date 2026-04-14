@@ -3,17 +3,17 @@ import Booking from '@/models/Booking';
 import Listing from '@/models/Listing';
 import User from '@/models/User';
 import { withAdminOrAuth } from '@/middleware/withAdminOrAuth';
+import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
 import { checkAvailability, calculatePrice } from '@/lib/availability';
 import { sendEmail } from '@/lib/mail';
 import { bookingConfirmationEmail } from '@/email-templates/booking-confirmation';
-import mongoose from 'mongoose';
 
 async function handler(req, res) {
   await dbConnect();
 
   if (req.method === 'GET') return withAdminOrAuth(listBookings)(req, res);
-  if (req.method === 'POST') return withAdminOrAuth(createBooking)(req, res);
+  if (req.method === 'POST') return withAuth(createBooking)(req, res);
 
   return res.status(405).json({ success: false, error: 'Méthode non autorisée' });
 }
@@ -94,44 +94,26 @@ async function createBooking(req, res) {
   // 3. Calculer le prix dynamique
   const pricing = calculatePrice(listing, start, end);
 
-  // 4. Création atomique avec double vérification via transaction MongoDB
-  const session = await mongoose.startSession();
-  let booking;
-
-  try {
-    await session.withTransaction(async () => {
-      // Re-vérifier les conflits dans la transaction
-      const conflicts = await Booking.findConflicts(listingId, start, end);
-      if (conflicts.length > 0) {
-        throw new Error('Ces dates viennent d\'être réservées par quelqu\'un d\'autre');
-      }
-
-      const [created] = await Booking.create(
-        [
-          {
-            listing: listingId,
-            user: req.user.id,
-            checkIn: start,
-            checkOut: end,
-            guests: parseInt(guests),
-            nights: pricing.nights,
-            pricePerNight: pricing.pricePerNight,
-            cleaningFee: pricing.cleaningFee,
-            serviceFee: pricing.serviceFee,
-            totalPrice: pricing.totalPrice,
-            status: listing.instantBooking ? 'confirmed' : 'pending',
-            specialRequests,
-          },
-        ],
-        { session }
-      );
-      booking = created;
-    });
-  } catch (error) {
-    return res.status(409).json({ success: false, error: error.message });
-  } finally {
-    session.endSession();
+  // 4. Double vérification des conflits avant création
+  const lastCheck = await Booking.findConflicts(listingId, start, end);
+  if (lastCheck.length > 0) {
+    return res.status(409).json({ success: false, error: 'Ces dates viennent d\'être réservées par quelqu\'un d\'autre' });
   }
+
+  const booking = await Booking.create({
+    listing: listingId,
+    user: req.user.id,
+    checkIn: start,
+    checkOut: end,
+    guests: parseInt(guests),
+    nights: pricing.nights,
+    pricePerNight: pricing.pricePerNight,
+    cleaningFee: pricing.cleaningFee,
+    serviceFee: pricing.serviceFee,
+    totalPrice: pricing.totalPrice,
+    status: listing.instantBooking ? 'confirmed' : 'pending',
+    specialRequests,
+  });
 
   // 5. Populate pour la réponse
   await booking.populate('listing', 'title images location slug checkInTime checkOutTime');

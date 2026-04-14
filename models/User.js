@@ -62,14 +62,17 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+UserSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 12);
-  next();
 });
 
 UserSchema.methods.comparePassword = async function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
+
+if (process.env.NODE_ENV !== 'production' && mongoose.models.User) {
+  mongoose.deleteModel('User');
+}
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

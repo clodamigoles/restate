@@ -93,9 +93,9 @@ const BookingSchema = new mongoose.Schema(
 );
 
 // ─── Validations ────────────────────────────────────────────────
-BookingSchema.pre('validate', function (next) {
+BookingSchema.pre('validate', async function () {
   if (this.checkOut <= this.checkIn) {
-    return next(new Error("La date de départ doit être après la date d'arrivée"));
+    throw new Error("La date de départ doit être après la date d'arrivée");
   }
 
   // Calcul du nombre de nuits
@@ -103,14 +103,12 @@ BookingSchema.pre('validate', function (next) {
   this.nights = Math.round((this.checkOut - this.checkIn) / msPerDay);
 
   if (this.nights < 1) {
-    return next(new Error('La réservation doit faire au moins 1 nuit'));
+    throw new Error('La réservation doit faire au moins 1 nuit');
   }
-
-  next();
 });
 
 // ─── Auto-set expiresAt pour les nouvelles réservations pending ──
-BookingSchema.pre('save', function (next) {
+BookingSchema.pre('save', async function () {
   // Nouveau document en status pending → on fixe l'expiration
   if (this.isNew && this.status === 'pending') {
     this.expiresAt = new Date(Date.now() + PENDING_EXPIRY_MS);
@@ -126,8 +124,6 @@ BookingSchema.pre('save', function (next) {
     this.cancelledAt = new Date();
     this.expiresAt = null;
   }
-
-  next();
 });
 
 // ─── Index ──────────────────────────────────────────────────────
@@ -193,5 +189,10 @@ BookingSchema.statics.extendHold = async function (bookingId, userId) {
     { new: true }
   );
 };
+
+// En dev, on vide le cache pour que les changements de schema soient pris en compte
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Booking) {
+  mongoose.deleteModel('Booking');
+}
 
 export default mongoose.models.Booking || mongoose.model('Booking', BookingSchema);

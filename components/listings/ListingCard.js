@@ -44,31 +44,31 @@ export default function ListingCard({ listing }) {
       {/* Infos */}
       <div className="p-4">
         <h3 className="line-clamp-1 font-semibold text-foreground">{title}</h3>
-        <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-3.5 w-3.5 shrink-0 text-accent" />
-          {listing.location?.city}
+          <span className="truncate">{listing.location?.city}</span>
         </p>
 
-        <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <BedDouble className="h-3.5 w-3.5" />
+        <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <BedDouble className="h-3.5 w-3.5 shrink-0 text-primary/50" />
             {listing.bedrooms} ch.
           </span>
-          <span className="flex items-center gap-1">
-            <Users className="h-3.5 w-3.5" />
+          <span className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 shrink-0 text-primary/50" />
             {listing.capacity} pers.
           </span>
           {listing.averageRating > 0 && (
-            <span className="ml-auto flex items-center gap-1 font-medium text-foreground">
-              <Star className="h-3.5 w-3.5 fill-accent text-accent" />
+            <span className="ml-auto flex items-center gap-1.5 font-medium text-foreground">
+              <Star className="h-3.5 w-3.5 shrink-0 fill-accent text-accent" />
               {listing.averageRating.toFixed(1)}
             </span>
           )}
         </div>
 
-        <div className="mt-3 border-t border-border pt-3">
+        <div className="mt-4 flex items-baseline gap-1 border-t border-border pt-3">
           <span className="font-display text-lg font-bold text-primary">{price}</span>
-          <span className="text-sm text-muted-foreground"> / nuit</span>
+          <span className="text-sm text-muted-foreground">/ nuit</span>
         </div>
       </div>
     </Link>
