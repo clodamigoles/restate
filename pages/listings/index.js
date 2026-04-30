@@ -272,6 +272,20 @@ export async function getServerSideProps({ query }) {
       start: s.start?.toISOString() || null,
       end: s.end?.toISOString() || null,
     })),
+    // Champs enrichis
+    surface:            l.surface             ?? null,
+    toilets:            l.toilets             ?? null,
+    floors:             l.floors              ?? null,
+    label:              l.label               ?? null,
+    stars:              l.stars               ?? null,
+    themes:             l.themes              || [],
+    activities:         l.activities          || [],
+    environment:        l.environment         || [],
+    cancellationPolicy: l.cancellationPolicy  ?? null,
+    deposit:            l.deposit             ?? null,
+    taxeSejour:         l.taxeSejour          ?? null,
+    host:               l.host ? { name: l.host.name ?? null, languages: l.host.languages || [] } : null,
+    extras:             l.extras              || {},
   }));
 
   return {

@@ -1,8 +1,12 @@
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 import Payment from '@/models/Payment';
+import User from '@/models/User';
+import Settings from '@/models/Settings';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
+import { sendEmail } from '@/lib/mail';
+import { bankTransferEmail } from '@/email-templates/bank-transfer';
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 
@@ -28,10 +32,11 @@ async function getPayment(req, res) {
   const payment = await Payment.findOne({ booking: id, method: 'bank_transfer' });
   if (!payment) return res.status(404).json({ success: false, error: 'Paiement introuvable' });
 
+  const cfg = await Settings.findOne({ key: 'global' }).lean();
   const bankDetails = {
-    iban: process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
-    bic: process.env.BANK_BIC || 'XXXXXXXX',
-    beneficiary: process.env.BANK_NAME || 'Restate SAS',
+    iban: cfg?.bankIban || process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
+    bic: cfg?.bankBic || process.env.BANK_BIC || 'XXXXXXXX',
+    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Restate SAS',
     reference: payment.transferReference,
     amount: booking.totalPrice,
   };
@@ -102,6 +107,25 @@ async function postPayment(req, res) {
     reference,
     amount: booking.totalPrice,
   };
+
+  // Envoyer l'email avec les coordonnées bancaires (fire-and-forget)
+  try {
+    const user = await User.findById(req.user.id).select('email name').lean();
+    if (user?.email) {
+      const bookingUrl = `${process.env.NEXTAUTH_URL}/bookings/${booking._id}`;
+      const { subject, html } = bankTransferEmail({
+        userName: user.name || 'Voyageur',
+        listing: booking.listing,
+        bankDetails,
+        bookingUrl,
+      });
+      sendEmail({ to: user.email, subject, html }).catch((err) =>
+        console.error('[bank-transfer email]', err)
+      );
+    }
+  } catch (err) {
+    console.error('[bank-transfer email]', err);
+  }
 
   return res.status(200).json({ success: true, data: { payment, bankDetails } });
 }

@@ -135,6 +135,20 @@ export default function ListingForm({ initial = {} }) {
     instantBooking: initial.instantBooking || false,
     isPublished: initial.isPublished || false,
     isFeatured: initial.isFeatured || false,
+    // ── Champs enrichis ──
+    surface:            initial.surface?.toString()  || '',
+    toilets:            initial.toilets?.toString()  || '',
+    floors:             initial.floors?.toString()   || '',
+    label:              initial.label               || '',
+    stars:              initial.stars?.toString()   || '',
+    cancellationPolicy: initial.cancellationPolicy  || '',
+    deposit:            initial.deposit    ? (initial.deposit    / 100).toString() : '',
+    taxeSejour:         initial.taxeSejour ? (initial.taxeSejour / 100).toString() : '',
+    'host.name':        initial.host?.name || '',
+    'host.languages':   initial.host?.languages?.join(', ') || '',
+    themes:             initial.themes      || [],
+    activities:         initial.activities  || [],
+    environment:        initial.environment || [],
   });
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -142,6 +156,15 @@ export default function ListingForm({ initial = {} }) {
     setForm((f) => ({ ...f, [field]: { ...f[field], [locale]: value } }));
   const setDistance = (key, value) =>
     setForm((f) => ({ ...f, distances: { ...f.distances, [key]: value } }));
+
+  // Helper tags (themes, activities, environment)
+  const addTag = (field, value) => {
+    const v = value.trim();
+    if (!v) return;
+    setForm((f) => ({ ...f, [field]: f[field].includes(v) ? f[field] : [...f[field], v] }));
+  };
+  const removeTag = (field, value) =>
+    setForm((f) => ({ ...f, [field]: f[field].filter((t) => t !== value) }));
 
   const toggleAmenity = (a) => {
     setForm((f) => ({
@@ -252,6 +275,24 @@ export default function ListingForm({ initial = {} }) {
       instantBooking: form.instantBooking,
       isPublished: form.isPublished,
       isFeatured: form.isFeatured,
+      // ── Champs enrichis ──
+      surface:            form.surface    ? Number(form.surface)    : null,
+      toilets:            form.toilets    ? Number(form.toilets)    : null,
+      floors:             form.floors     ? Number(form.floors)     : null,
+      label:              form.label      || null,
+      stars:              form.stars      ? Number(form.stars)      : null,
+      cancellationPolicy: form.cancellationPolicy || null,
+      deposit:    form.deposit    ? Math.round(parseFloat(form.deposit)    * 100) : null,
+      taxeSejour: form.taxeSejour ? Math.round(parseFloat(form.taxeSejour) * 100) : null,
+      host: {
+        name:      form['host.name'] || null,
+        languages: form['host.languages']
+          ? form['host.languages'].split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+      },
+      themes:      form.themes,
+      activities:  form.activities,
+      environment: form.environment,
     };
 
     try {
@@ -454,6 +495,105 @@ export default function ListingForm({ initial = {} }) {
         </div>
       </section>
 
+      {/* ─── 4b : Caractéristiques supplémentaires ─── */}
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="text-base font-semibold mb-4">Caractéristiques du bien</h2>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="space-y-2">
+            <Label>Surface (m²)</Label>
+            <Input type="number" min="0" placeholder="—" value={form.surface} onChange={(e) => set('surface', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>WC</Label>
+            <Input type="number" min="0" placeholder="—" value={form.toilets} onChange={(e) => set('toilets', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Niveaux / étages</Label>
+            <Input type="number" min="1" placeholder="—" value={form.floors} onChange={(e) => set('floors', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Label / Certification</Label>
+            <Input placeholder="ex: Gîtes de France 3 épis" value={form.label} onChange={(e) => set('label', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Étoiles / épis du label</Label>
+            <select
+              value={form.stars}
+              onChange={(e) => set('stars', e.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">—</option>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <option key={n} value={n}>{n} {'★'.repeat(n)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label>Politique d'annulation</Label>
+            <select
+              value={form.cancellationPolicy}
+              onChange={(e) => set('cancellationPolicy', e.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">—</option>
+              <option value="flexible">Flexible</option>
+              <option value="moderate">Modérée</option>
+              <option value="strict">Stricte</option>
+              <option value="non_refundable">Non remboursable</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label>Caution ({form.currency})</Label>
+            <Input type="number" step="0.01" min="0" placeholder="—" value={form.deposit} onChange={(e) => set('deposit', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Taxe de séjour / pers / nuit ({form.currency})</Label>
+            <Input type="number" step="0.01" min="0" placeholder="—" value={form.taxeSejour} onChange={(e) => set('taxeSejour', e.target.value)} />
+          </div>
+        </div>
+
+        {/* Hébergeur */}
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 border-t pt-4">
+          <div className="space-y-2">
+            <Label>Nom de l'hébergeur</Label>
+            <Input placeholder="Prénom Nom" value={form['host.name']} onChange={(e) => set('host.name', e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Langues parlées</Label>
+            <Input placeholder="fr, en, es" value={form['host.languages']} onChange={(e) => set('host.languages', e.target.value)} />
+            <p className="text-xs text-muted-foreground">Codes séparés par des virgules</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 4c : Thèmes, activités, environnement ─── */}
+      <section className="rounded-xl border bg-card p-5">
+        <h2 className="text-base font-semibold mb-4">Ambiance & activités</h2>
+        <div className="space-y-5">
+          <TagField
+            label="Thèmes / ambiance"
+            placeholder="ex: famille, romantique, nature, luxe…"
+            tags={form.themes}
+            onAdd={(v) => addTag('themes', v)}
+            onRemove={(v) => removeTag('themes', v)}
+          />
+          <TagField
+            label="Activités à proximité"
+            placeholder="ex: surf, randonnée, ski, vélo…"
+            tags={form.activities}
+            onAdd={(v) => addTag('activities', v)}
+            onRemove={(v) => removeTag('activities', v)}
+          />
+          <TagField
+            label="Environnement"
+            placeholder="ex: mer, montagne, forêt, campagne…"
+            tags={form.environment}
+            onAdd={(v) => addTag('environment', v)}
+            onRemove={(v) => removeTag('environment', v)}
+          />
+        </div>
+      </section>
+
       {/* ─── 5 : Equipements par categorie ─── */}
       <section className="rounded-xl border bg-card p-5">
         <h2 className="text-base font-semibold mb-5">Equipements</h2>
@@ -626,6 +766,44 @@ export default function ListingForm({ initial = {} }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function TagField({ label, placeholder, tags, onAdd, onRemove }) {
+  const [input, setInput] = useState('');
+
+  function handleKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      onAdd(input);
+      setInput('');
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex flex-wrap gap-1.5 min-h-[36px] rounded-md border border-input bg-background px-2 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+        {tags.map((tag) => (
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            {tag}
+            <button type="button" onClick={() => onRemove(tag)} className="ml-0.5 text-primary/60 hover:text-primary">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKey}
+          onBlur={() => { if (input.trim()) { onAdd(input); setInput(''); } }}
+          placeholder={tags.length === 0 ? placeholder : ''}
+          className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">Tapez une valeur et appuyez sur Entrée ou virgule pour ajouter</p>
+    </div>
   );
 }
 

@@ -6,7 +6,7 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { formatPrice, PROPERTY_TYPE_LABELS, getLabel } from '@/lib/constants';
-import { Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, Eye, EyeOff, Star, StarOff, Wand2 } from 'lucide-react';
 
 const fetcher = (url) => fetch(url).then((r) => r.json());
 
@@ -52,12 +52,20 @@ export default function ListingsPage() {
         <p className="text-sm text-muted-foreground">
           {pagination?.total ?? 0} annonce{(pagination?.total ?? 0) > 1 ? 's' : ''}
         </p>
-        <Button asChild size="sm">
-          <Link href="/dlt/listings/new">
-            <Plus className="mr-1.5 h-4 w-4" />
-            Nouvelle annonce
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dlt/listings/import">
+              <Wand2 className="mr-1.5 h-4 w-4" />
+              Importer via IA
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/dlt/listings/new">
+              <Plus className="mr-1.5 h-4 w-4" />
+              Nouvelle annonce
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card overflow-hidden">

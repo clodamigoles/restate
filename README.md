@@ -1,4 +1,5 @@
-voici le prompte initale pour développer le projet @proxy.js ensuite j'ai eux à refaire la refonte de l'interface frontend du site ansi que la page d'accueil spécialement, maintenant je    
-  deveais restrucutrer le backend et la bdd pour la connecter au frontend, on avait commencer avec un plan en tête mais la discusisino a été reinitialiser je te demande de tout analyser et    
-  de me faire le plan et on continue, n'oublie pas que dans la bdd on doit aussi traduire les textes en "en de es it pt nl fr" fr principale, pour le moemn on laisse la place pour traduire    
-  après, aussi les devises aussi on fera uniquement les hooks et utils, mais on doit retravailler le backend et bdd, après on fera aussi l'admin 
+je veux que tu m'aides à apporter des modifs à cette app web. 1erement, lorsqu'on veut passer une réservation et qu'on est pas connecter et qu'on cliquer sur Reserver un modal  
+  s'ouvre pour demander de se connecter ou s'inscrire, je veux changer cette logique je veux qu'au lieu d'ouvrir directemen un modal, un champ email apparaît au dessus du bouton   
+  reserver et demander l'email et le bouotn devient "Continuer" si l'utilisateur est déjà inscrit ça le connecte directement (on verra la sécurité après) et la résservation passe  
+  en même temps, s'il n'est pas encore connecté ça lui demande s'il souhaite continuer et s'inscrire plus tard ou s'inscre (en lui demandant le nom, mot de passe etc...) s'il      
+  fait plus tard alors le compte est crée et la réservation est faite auto; sinon il renseigne ses infos et la reservation est aussi passé en même temps

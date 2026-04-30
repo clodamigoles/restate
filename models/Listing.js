@@ -110,6 +110,43 @@ const ListingSchema = new mongoose.Schema(
       default: [],
     },
 
+    // ─── Champs enrichis ─────────────────────────────────────────
+    // Surface habitable
+    surface: { type: Number, default: null },   // m²
+    // Nb de WC (peut différer de bathrooms)
+    toilets: { type: Number, default: null },
+    // Nb d'étages
+    floors: { type: Number, default: null },
+
+    // Label / certification (Gîtes de France, Clévacances, Meublé de tourisme…)
+    label: { type: String, default: null },  // texte libre, ex: "Gîtes de France 3 épis"
+    stars: { type: Number, min: 1, max: 5, default: null }, // étoiles ou épis du label
+
+    // Thèmes / ambiance (libre, non enuméré)
+    themes: { type: [String], default: [] },      // ex: 'famille', 'romantique', 'nature', 'luxe'
+    // Activités à proximité (libre)
+    activities: { type: [String], default: [] },  // ex: 'surf', 'randonnee', 'velo', 'ski', 'peche'
+    // Environnement (libre)
+    environment: { type: [String], default: [] }, // ex: 'mer', 'montagne', 'campagne', 'foret', 'lac'
+
+    // Politique d'annulation
+    cancellationPolicy: { type: String, default: null }, // 'flexible' | 'moderate' | 'strict' | 'non_refundable'
+
+    // Dépôt de garantie (centimes)
+    deposit: { type: Number, default: null },
+
+    // Taxe de séjour (centimes/personne/nuit)
+    taxeSejour: { type: Number, default: null },
+
+    // Infos hébergeur
+    host: {
+      name:      { type: String, default: null },
+      languages: { type: [String], default: [] }, // ex: ['fr', 'en']
+    },
+
+    // Données libres extraites par l'IA (tout ce qui ne rentre pas dans les autres champs)
+    extras: { type: mongoose.Schema.Types.Mixed, default: {} },
+
     // Distances en metres (null = non renseignee)
     distances: {
       transport: { type: Number, default: null }, // transports en commun
