@@ -1,22 +1,26 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import AdminLayout from '@/components/layout/AdminLayout';
 import ListingForm from '@/components/listings/ListingForm';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Wand2, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Wand2, Loader2, CheckCircle2, RefreshCw, MessageSquare } from 'lucide-react';
 
 export default function ImportListingPage() {
+  const router = useRouter();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [extracted, setExtracted] = useState(null);
+  const [extractedReviews, setExtractedReviews] = useState([]);
 
   async function handleAnalyze(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
     setExtracted(null);
+    setExtractedReviews([]);
 
     try {
       const res = await fetch('/api/scrape-listing', {
@@ -28,11 +32,29 @@ export default function ImportListingPage() {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       setExtracted(data.data);
+      setExtractedReviews(data.reviews || []);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  }
+
+  // Appelé par ListingForm après création réussie
+  async function handleAfterSave(listingId) {
+    if (extractedReviews.length > 0) {
+      try {
+        await fetch(`/api/listings/${listingId}/reviews/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ reviews: extractedReviews, source: url }),
+        });
+      } catch {
+        // Non bloquant : l'annonce est déjà créée
+      }
+    }
+    router.push('/dlt/listings');
   }
 
   return (
@@ -101,13 +123,19 @@ export default function ImportListingPage() {
           <div className="mt-8 space-y-6">
             <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/50 dark:bg-emerald-950/30 px-5 py-4">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-2">
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
                   Données extraites — vérifiez, uploadez les photos, puis créez l'annonce.
                 </p>
+                {extractedReviews.length > 0 && (
+                  <p className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {extractedReviews.length} avis trouvé{extractedReviews.length > 1 ? 's' : ''} — ils seront importés automatiquement à la création.
+                  </p>
+                )}
                 <button
                   type="button"
-                  onClick={() => setExtracted(null)}
+                  onClick={() => { setExtracted(null); setExtractedReviews([]); }}
                   className="flex items-center gap-1 text-xs text-emerald-700 underline hover:no-underline dark:text-emerald-400"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -116,7 +144,7 @@ export default function ImportListingPage() {
               </div>
             </div>
 
-            <ListingForm initial={extracted} />
+            <ListingForm initial={extracted} onAfterSave={handleAfterSave} />
           </div>
         )}
       </div>

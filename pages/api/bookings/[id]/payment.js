@@ -100,10 +100,11 @@ async function postPayment(req, res) {
   // Mettre à jour le statut de paiement de la réservation
   await Booking.findByIdAndUpdate(id, { paymentStatus: 'pending' });
 
+  const cfg = await Settings.findOne({ key: 'global' }).lean();
   const bankDetails = {
-    iban: process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
-    bic: process.env.BANK_BIC || 'XXXXXXXX',
-    beneficiary: process.env.BANK_NAME || 'Restate SAS',
+    iban: cfg?.bankIban || process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
+    bic: cfg?.bankBic || process.env.BANK_BIC || 'XXXXXXXX',
+    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Restate SAS',
     reference,
     amount: booking.totalPrice,
   };

@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import dbConnect from '@/lib/db';
 import Listing from '@/models/Listing';
 import ListingGallery from '@/components/listings/ListingGallery';
+import ReviewsModal from '@/components/listings/ReviewsModal';
 import AvailabilityCalendar from '@/components/bookings/AvailabilityCalendar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -67,7 +68,7 @@ const AMENITY_ICONS = {
   non_smoking: CircleOff,
 };
 
-export default function ListingDetailPage({ listing }) {
+export default function ListingDetailPage({ listing, reviews = [], subRatings = {} }) {
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -83,6 +84,7 @@ export default function ListingDetailPage({ listing }) {
   const [guestError, setGuestError] = useState('');
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarRange, setCalendarRange] = useState({ from: undefined, to: undefined });
+  const [showReviews, setShowReviews] = useState(false);
 
   // Plages bloquées localement après une réservation réussie (mise à jour optimiste)
   const [extraDisabledRanges, setExtraDisabledRanges] = useState([]);
@@ -539,6 +541,62 @@ export default function ListingDetailPage({ listing }) {
               );
             })()}
 
+            {/* Avis */}
+            {listing.reviewCount > 0 && (
+              <div className="border-t pt-6">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="flex items-center gap-2 text-xl font-semibold">
+                    <Star className="h-5 w-5 fill-primary text-primary" />
+                    {listing.averageRating.toFixed(1)}
+                    <span className="font-normal text-muted-foreground text-base">
+                      · {listing.reviewCount} avis
+                    </span>
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {reviews.map((r) => (
+                    <div key={r._id} className="rounded-xl border bg-card p-4">
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                            {(r.user?.name || r.reviewerName || 'V').charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium leading-none">
+                              {r.user?.name || r.reviewerName || 'Voyageur'}
+                            </p>
+                            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-emerald-600">
+                              <ShieldCheck className="h-3 w-3" />
+                              Voyageur vérifié
+                            </p>
+                          </div>
+                        </div>
+                        <span className="flex items-center gap-1 text-sm font-semibold">
+                          <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                          {r.rating.toFixed(1)}
+                        </span>
+                      </div>
+                      {r.title && (
+                        <p className="mb-1 text-sm font-semibold">{r.title}</p>
+                      )}
+                      {r.comment && (
+                        <p className="line-clamp-3 text-sm text-muted-foreground">{r.comment}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  className="mt-5"
+                  onClick={() => setShowReviews(true)}
+                >
+                  Voir les {listing.reviewCount} avis
+                </Button>
+              </div>
+            )}
+
             {/* Localisation */}
             <div className="border-t pt-6">
               <h2 className="text-xl font-semibold">Localisation</h2>
@@ -749,6 +807,15 @@ export default function ListingDetailPage({ listing }) {
           </div>
         </div>
       </div>
+
+      <ReviewsModal
+        open={showReviews}
+        onClose={() => setShowReviews(false)}
+        listingId={listing._id}
+        averageRating={listing.averageRating}
+        reviewCount={listing.reviewCount}
+        subRatings={subRatings}
+      />
     </>
   );
 }
@@ -768,6 +835,7 @@ export async function getServerSideProps({ params }) {
 
   const { id } = params;
   const mongoose = (await import('mongoose')).default;
+  const Review = (await import('@/models/Review')).default;
 
   const filter = mongoose.isValidObjectId(id)
     ? { $or: [{ _id: id }, { slug: id }] }
@@ -775,6 +843,36 @@ export async function getServerSideProps({ params }) {
 
   const raw = await Listing.findOne(filter).populate('owner', 'name').lean();
   if (!raw) return { notFound: true };
+
+  // Avis — 3 premiers + sous-notes agrégées
+  const listingId = raw._id;
+  const [previewReviews, subRatingsAgg] = await Promise.all([
+    Review.find({ listing: listingId })
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(3)
+      .populate('user', 'name')
+      .lean(),
+    Review.aggregate([
+      { $match: { listing: listingId } },
+      {
+        $group: {
+          _id: null,
+          cleanliness:   { $avg: '$subRatings.cleanliness' },
+          communication: { $avg: '$subRatings.communication' },
+          equipment:     { $avg: '$subRatings.equipment' },
+          valueForMoney: { $avg: '$subRatings.valueForMoney' },
+        },
+      },
+    ]),
+  ]);
+
+  const sr = subRatingsAgg[0] || {};
+  const subRatings = {
+    cleanliness:   sr.cleanliness   != null ? Math.round(sr.cleanliness   * 10) / 10 : null,
+    communication: sr.communication != null ? Math.round(sr.communication * 10) / 10 : null,
+    equipment:     sr.equipment     != null ? Math.round(sr.equipment     * 10) / 10 : null,
+    valueForMoney: sr.valueForMoney != null ? Math.round(sr.valueForMoney * 10) / 10 : null,
+  };
 
   const listing = {
     ...raw,
@@ -808,5 +906,17 @@ export async function getServerSideProps({ params }) {
     extras:             raw.extras              || {},
   };
 
-  return { props: { listing } };
+  const reviews = previewReviews.map((r) => ({
+    _id:          r._id.toString(),
+    reviewerName: r.reviewerName || null,
+    title:        r.title        || null,
+    rating:       r.rating,
+    comment:      r.comment      || null,
+    isImported:   r.isImported   || false,
+    subRatings:   r.subRatings   || null,
+    user:         r.user ? { name: r.user.name } : null,
+    createdAt:    r.createdAt?.toISOString() || null,
+  }));
+
+  return { props: { listing, reviews, subRatings } };
 }

@@ -39,15 +39,16 @@ export default function BookingDetailPage() {
 
   const booking = data?.data;
 
-  // Récupère les détails bancaires + récipissés si virement en attente (ex: après rechargement)
+  // Récupère les détails bancaires en temps réel (polling 30s) dès qu'un virement est en cours
   const isPendingTransfer = booking?.paymentStatus === 'pending';
-  const { data: paymentData } = useSWR(
-    isPendingTransfer && !bankDetails && id ? `/api/bookings/${id}/payment` : null,
+  const { data: paymentData, mutate: mutatePayment } = useSWR(
+    (isPendingTransfer || bankDetails) && id ? `/api/bookings/${id}/payment` : null,
     fetcher,
+    { refreshInterval: 30000 },
   );
 
-  // bankDetails vient soit de l'initiation en session, soit du fetch après rechargement
-  const resolvedBankDetails = bankDetails || paymentData?.data?.bankDetails || null;
+  // paymentData (fraîchement récupéré) a priorité sur bankDetails (valeur de session initiale)
+  const resolvedBankDetails = paymentData?.data?.bankDetails || bankDetails || null;
   const resolvedProofs = paymentData?.data?.proofs || [];
 
   async function handleCancel() {
@@ -77,6 +78,7 @@ export default function BookingDetailPage() {
     if (!d.success) return setPaymentError(d.error);
     setBankDetails(d.data.bankDetails);
     mutate();
+    mutatePayment();
   }
 
   function handleMethodChange(method) {

@@ -98,6 +98,22 @@ Retourne un objet JSON complet. Utilise null pour tout champ non trouvé (jamais
     "transport": distance_transport_commun_en_metres_ou_null
   },
 
+  /* ── Avis voyageurs (max 10, tels qu'affichés sur la page) ── */
+  "reviews": [
+    {
+      "title": "titre de l'avis ou null",
+      "reviewerName": "prénom ou pseudo du voyageur",
+      "rating": note_sur_10,
+      "comment": "texte complet de l'avis",
+      "subRatings": {
+        "cleanliness":   note_propreté_sur_10_ou_null,
+        "communication": note_communication_sur_10_ou_null,
+        "equipment":     note_équipements_sur_10_ou_null,
+        "valueForMoney": note_rapport_qualité_prix_sur_10_ou_null
+      }
+    }
+  ],
+
   /* ── Données libres (tout ce que tu trouves d'intéressant non couvert ci-dessus) ── */
   "extras": {
     "heatingType": "type de chauffage si précisé (ex: électrique, gaz, bois, pompe à chaleur, plancher chauffant)",
@@ -127,7 +143,9 @@ Instructions importantes :
 - Pour "themes", "activities", "environment" : liste libre en français, sois créatif et précis selon le contexte
 - Pour "extras" : remplis tous les sous-champs si tu trouves l'info, sinon null
 - Pour "type" : gite/house = maison de vacances, villa = villa luxueuse, chalet = chalet montagne, chambre_hotes = B&B, ferme = agritourisme
-- Pour "amenities" : utilise UNIQUEMENT les clés exactes de la liste fournie`;
+- Pour "amenities" : utilise UNIQUEMENT les clés exactes de la liste fournie
+- Pour "reviews" : extrais au maximum 10 avis. Si aucun avis visible sur la page, retourne []
+- Pour les notes dans "reviews" : si la page affiche des notes sur 5, multiplie par 2 pour normaliser sur 10`;
 }
 
 async function scrapeHandler(req, res) {
@@ -187,7 +205,7 @@ async function scrapeHandler(req, res) {
         messages: [{ role: 'user', content: buildPrompt(text, url) }],
         temperature: 0,
         response_format: { type: 'json_object' },
-        max_tokens: 3000,
+        max_tokens: 4500,
       }),
     });
     const groqData = await groqRes.json();
@@ -275,7 +293,26 @@ async function scrapeHandler(req, res) {
     isFeatured:  false,
   };
 
-  return res.json({ success: true, data });
+  // Normaliser les avis extraits
+  const reviews = Array.isArray(rawJson.reviews)
+    ? rawJson.reviews
+        .filter((r) => r && r.rating >= 1 && r.rating <= 10)
+        .slice(0, 10)
+        .map((r) => ({
+          title:        r.title        || null,
+          reviewerName: r.reviewerName || null,
+          rating:       Number(r.rating),
+          comment:      r.comment      || null,
+          subRatings: {
+            cleanliness:   r.subRatings?.cleanliness   ?? null,
+            communication: r.subRatings?.communication ?? null,
+            equipment:     r.subRatings?.equipment     ?? null,
+            valueForMoney: r.subRatings?.valueForMoney ?? null,
+          },
+        }))
+    : [];
+
+  return res.json({ success: true, data, reviews });
 }
 
 async function handler(req, res) {

@@ -100,7 +100,7 @@ function initDistances(initial) {
   return result;
 }
 
-export default function ListingForm({ initial = {} }) {
+export default function ListingForm({ initial = {}, onAfterSave = null }) {
   const router = useRouter();
   const isEdit = Boolean(initial._id);
   const [loading, setLoading] = useState(false);
@@ -306,7 +306,11 @@ export default function ListingForm({ initial = {} }) {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erreur');
-      router.push('/dlt/listings');
+      if (onAfterSave) {
+        await onAfterSave(data.data._id);
+      } else {
+        router.push('/dlt/listings');
+      }
     } catch (err) {
       setError(err.message);
     } finally {

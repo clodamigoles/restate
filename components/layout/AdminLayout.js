@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, Building2, CalendarDays, CreditCard, Users,
-  LogOut, Menu, X, ChevronRight, Home,
+  LogOut, Menu, X, ChevronRight, Home, Settings,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/dlt/bookings', label: 'Reservations', icon: CalendarDays },
   { href: '/dlt/payments', label: 'Paiements', icon: CreditCard },
   { href: '/dlt/users', label: 'Utilisateurs', icon: Users },
+  { href: '/dlt/settings', label: 'Parametres', icon: Settings },
 ];
 
 export default function AdminLayout({ children, title, breadcrumb }) {

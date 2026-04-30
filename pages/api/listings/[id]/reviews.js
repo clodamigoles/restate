@@ -25,9 +25,17 @@ async function getReviews(req, res) {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
+  const sort = req.query.sort || 'recent';
+  const sortMap = {
+    recent:   { createdAt: -1 },
+    oldest:   { createdAt:  1 },
+    relevant: { rating: -1, createdAt: -1 },
+  };
+  const sortOrder = sortMap[sort] || sortMap.recent;
+
   const [reviews, total] = await Promise.all([
     Review.find({ listing: id })
-      .sort({ createdAt: -1 })
+      .sort(sortOrder)
       .skip(skip)
       .limit(limit)
       .populate('user', 'name avatar'),
