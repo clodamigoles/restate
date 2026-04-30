@@ -134,6 +134,7 @@ function serializeListing(l) {
     taxeSejour:         l.taxeSejour          ?? null,
     host:               l.host ? { name: l.host.name ?? null, languages: l.host.languages || [] } : null,
     extras:             l.extras              || {},
+    mapUrl:             l.mapUrl              ?? null,
   };
 }
 

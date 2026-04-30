@@ -147,6 +147,9 @@ const ListingSchema = new mongoose.Schema(
     // Données libres extraites par l'IA (tout ce qui ne rentre pas dans les autres champs)
     extras: { type: mongoose.Schema.Types.Mixed, default: {} },
 
+    // URL Google Maps (construite à l'import ou saisie manuellement)
+    mapUrl: { type: String, default: null },
+
     // Distances en metres (null = non renseignee)
     distances: {
       transport: { type: Number, default: null }, // transports en commun

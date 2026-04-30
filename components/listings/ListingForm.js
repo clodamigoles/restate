@@ -149,6 +149,7 @@ export default function ListingForm({ initial = {}, onAfterSave = null }) {
     themes:             initial.themes      || [],
     activities:         initial.activities  || [],
     environment:        initial.environment || [],
+    mapUrl:             initial.mapUrl      || '',
   });
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -293,6 +294,7 @@ export default function ListingForm({ initial = {}, onAfterSave = null }) {
       themes:      form.themes,
       activities:  form.activities,
       environment: form.environment,
+      mapUrl:      form.mapUrl || null,
     };
 
     try {

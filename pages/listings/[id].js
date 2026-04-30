@@ -601,11 +601,34 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
             <div className="border-t pt-6">
               <h2 className="text-xl font-semibold">Localisation</h2>
               <p className="mt-2 text-muted-foreground">
-                {listing.location.address && `${listing.location.address}, `}
-                {listing.location.zipCode && `${listing.location.zipCode} `}
                 {listing.location.city}
                 {listing.location.region && `, ${listing.location.region}`}
               </p>
+              {listing.mapUrl && (
+                <div className="mt-4 space-y-2">
+                  <div className="overflow-hidden rounded-xl border">
+                    <iframe
+                      src={`${listing.mapUrl}&output=embed&z=14`}
+                      width="100%"
+                      height="300"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Carte de localisation"
+                    />
+                  </div>
+                  <a
+                    href={listing.mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    Ouvrir dans Google Maps
+                  </a>
+                </div>
+              )}
             </div>
           </div>
 
@@ -904,6 +927,7 @@ export async function getServerSideProps({ params }) {
     taxeSejour:         raw.taxeSejour          ?? null,
     host:               raw.host ? { name: raw.host.name ?? null, languages: raw.host.languages || [] } : { name: null, languages: [] },
     extras:             raw.extras              || {},
+    mapUrl:             raw.mapUrl              ?? null,
   };
 
   const reviews = previewReviews.map((r) => ({

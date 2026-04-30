@@ -335,6 +335,22 @@ async function scrapeHandler(req, res) {
     // Extras libres
     extras: rawJson.extras || {},
 
+    // URL Google Maps construite depuis les coordonnées ou l'adresse complète
+    mapUrl: (() => {
+      const lat = rawJson.location?.coordinates?.lat;
+      const lng = rawJson.location?.coordinates?.lng;
+      if (lat && lng) return `https://maps.google.com/maps?q=${lat},${lng}`;
+      const parts = [
+        rawJson.location?.address,
+        rawJson.location?.city,
+        rawJson.location?.region,
+        rawJson.location?.country || 'France',
+      ].filter(Boolean);
+      return parts.length > 0
+        ? `https://maps.google.com/maps?q=${encodeURIComponent(parts.join(', '))}`
+        : null;
+    })(),
+
     // Defaults
     images:      [],
     isPublished: false,
