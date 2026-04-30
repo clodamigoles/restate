@@ -98,18 +98,18 @@ Retourne un objet JSON complet. Utilise null pour tout champ non trouvé (jamais
     "transport": distance_transport_commun_en_metres_ou_null
   },
 
-  /* ── Avis voyageurs (max 10, tels qu'affichés sur la page) ── */
+  /* ── Avis voyageurs (autant que possible, tels qu'affichés sur la page) ── */
   "reviews": [
     {
       "title": "titre de l'avis ou null",
       "reviewerName": "prénom ou pseudo du voyageur",
-      "rating": note_sur_10,
+      "rating": note_entre_5_et_9_sur_10_jamais_10_adapter_à_la_qualite_réelle,
       "comment": "texte complet de l'avis",
       "subRatings": {
-        "cleanliness":   note_propreté_sur_10_ou_null,
-        "communication": note_communication_sur_10_ou_null,
-        "equipment":     note_équipements_sur_10_ou_null,
-        "valueForMoney": note_rapport_qualité_prix_sur_10_ou_null
+        "cleanliness":   note_propreté_entre_5_et_9_ou_null,
+        "communication": note_communication_entre_5_et_9_ou_null,
+        "equipment":     note_équipements_entre_5_et_9_ou_null,
+        "valueForMoney": note_rapport_qualité_prix_entre_5_et_9_ou_null
       }
     }
   ],
@@ -144,8 +144,56 @@ Instructions importantes :
 - Pour "extras" : remplis tous les sous-champs si tu trouves l'info, sinon null
 - Pour "type" : gite/house = maison de vacances, villa = villa luxueuse, chalet = chalet montagne, chambre_hotes = B&B, ferme = agritourisme
 - Pour "amenities" : utilise UNIQUEMENT les clés exactes de la liste fournie
-- Pour "reviews" : extrais au maximum 10 avis. Si aucun avis visible sur la page, retourne []
-- Pour les notes dans "reviews" : si la page affiche des notes sur 5, multiplie par 2 pour normaliser sur 10`;
+- Pour "reviews" : extrais TOUS les avis visibles sur la page (pas de limite). Si aucun avis visible, retourne []
+- Pour les notes dans "reviews" : ramène toujours à une échelle sur 10, JAMAIS 10 — plafonne à 9. Adapte selon la qualité réelle (mauvais avis → 5-6, moyen → 7, bon → 8, excellent → 9)`;
+}
+
+function buildGenerateReviewsPrompt(rawJson, count) {
+  const title = rawJson.title_fr || 'Logement de vacances';
+  const type  = rawJson.type    || 'gite';
+  const city  = rawJson.location?.city   || 'France';
+  const region = rawJson.location?.region || '';
+  const desc  = (rawJson.description_fr  || '').slice(0, 600);
+  const amenities = Array.isArray(rawJson.amenities) ? rawJson.amenities.slice(0, 8).join(', ') : '';
+
+  return `Génère exactement ${count} avis de vacanciers RÉALISTES en français pour ce logement.
+
+Logement : "${title}" — ${type} à ${city}${region ? ', ' + region : ''}
+Description : ${desc}
+Équipements : ${amenities}
+
+Règles STRICTES :
+- Notes entre 5 et 9 sur 10, JAMAIS 10, JAMAIS toutes identiques
+- Distribution réaliste : 1-2 notes de 5-6 (avis avec critiques), la majorité entre 7-8, 1-2 à 9
+- Ton humain et naturel : même les bons avis mentionnent un petit défaut (wifi lent, literie correcte mais pas top, bruit la nuit, route d'accès difficile…)
+- Prénoms français variés (hommes et femmes mélangés)
+- Longueurs variées : certains très courts (1 phrase), d'autres plus détaillés (3-4 phrases)
+- Mentionner des éléments concrets liés à ce logement précis
+- Pas de ton publicitaire ni de formules génériques comme "je recommande vivement"
+
+Retourne UNIQUEMENT ce JSON :
+{ "reviews": [ { "reviewerName": "Prénom Nom", "rating": 8, "comment": "texte en français" } ] }`;
+}
+
+async function generateAdditionalReviews(groqKey, rawJson, needed) {
+  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${groqKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: buildGenerateReviewsPrompt(rawJson, needed) }],
+      temperature: 0.85,
+      response_format: { type: 'json_object' },
+      max_tokens: 2500,
+    }),
+  });
+  const groqData = await groqRes.json();
+  if (!groqRes.ok) throw new Error(groqData.error?.message || `Groq error ${groqRes.status}`);
+  const parsed = JSON.parse(groqData.choices[0].message.content);
+  return Array.isArray(parsed.reviews) ? parsed.reviews : [];
 }
 
 async function scrapeHandler(req, res) {
@@ -293,24 +341,46 @@ async function scrapeHandler(req, res) {
     isFeatured:  false,
   };
 
-  // Normaliser les avis extraits
-  const reviews = Array.isArray(rawJson.reviews)
+  const clampRating = (n) => Math.min(9, Math.max(5, Math.round(Number(n))));
+
+  // Normaliser les avis extraits (rating plafonné à 9)
+  let reviews = Array.isArray(rawJson.reviews)
     ? rawJson.reviews
-        .filter((r) => r && r.rating >= 1 && r.rating <= 10)
-        .slice(0, 10)
+        .filter((r) => r && Number(r.rating) >= 1 && Number(r.rating) <= 10)
         .map((r) => ({
           title:        r.title        || null,
           reviewerName: r.reviewerName || null,
-          rating:       Number(r.rating),
+          rating:       clampRating(r.rating),
           comment:      r.comment      || null,
           subRatings: {
-            cleanliness:   r.subRatings?.cleanliness   ?? null,
-            communication: r.subRatings?.communication ?? null,
-            equipment:     r.subRatings?.equipment     ?? null,
-            valueForMoney: r.subRatings?.valueForMoney ?? null,
+            cleanliness:   r.subRatings?.cleanliness   != null ? clampRating(r.subRatings.cleanliness)   : null,
+            communication: r.subRatings?.communication != null ? clampRating(r.subRatings.communication) : null,
+            equipment:     r.subRatings?.equipment     != null ? clampRating(r.subRatings.equipment)     : null,
+            valueForMoney: r.subRatings?.valueForMoney != null ? clampRating(r.subRatings.valueForMoney) : null,
           },
         }))
     : [];
+
+  // Compléter jusqu'à un total aléatoire entre 5 et 30 avis via une 2e génération IA
+  const target = Math.floor(Math.random() * 26) + 5; // 5–30
+  if (reviews.length < target) {
+    try {
+      const needed = target - reviews.length;
+      const generated = await generateAdditionalReviews(groqKey, rawJson, needed);
+      const normalizedGenerated = generated
+        .filter((r) => r && r.comment)
+        .map((r) => ({
+          title:        null,
+          reviewerName: r.reviewerName || null,
+          rating:       clampRating(r.rating ?? 7),
+          comment:      r.comment,
+          subRatings:   { cleanliness: null, communication: null, equipment: null, valueForMoney: null },
+        }));
+      reviews = [...reviews, ...normalizedGenerated];
+    } catch (e) {
+      console.error('[SCRAPE] Génération avis échouée:', e.message);
+    }
+  }
 
   return res.json({ success: true, data, reviews });
 }

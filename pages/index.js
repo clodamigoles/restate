@@ -104,87 +104,6 @@ const LODGING_TYPES = [
   },
 ];
 
-// Fallback statique si la BDD est vide
-const FALLBACK_LISTINGS = [
-  {
-    _id: 'f1',
-    slug: 'villa-azur-cote-d-azur',
-    title: { fr: 'Villa Azur avec piscine' },
-    type: 'villa',
-    isFeatured: true,
-    images: ['https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Cote d\'Azur' },
-    pricePerNight: 25000,
-    bedrooms: 4,
-    capacity: 8,
-    averageRating: 4.9,
-  },
-  {
-    _id: 'f2',
-    slug: 'appartement-lumiere-paris',
-    title: { fr: 'Appartement Lumiere - Paris 7e' },
-    type: 'apartment',
-    isFeatured: false,
-    images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Paris' },
-    pricePerNight: 12000,
-    bedrooms: 2,
-    capacity: 4,
-    averageRating: 4.7,
-  },
-  {
-    _id: 'f3',
-    slug: 'gite-des-alpilles-provence',
-    title: { fr: 'Gite des Alpilles en Provence' },
-    type: 'gite',
-    isFeatured: true,
-    images: ['https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Provence' },
-    pricePerNight: 9500,
-    bedrooms: 3,
-    capacity: 6,
-    averageRating: 4.8,
-  },
-  {
-    _id: 'f4',
-    slug: 'studio-bord-de-mer-nice',
-    title: { fr: 'Studio bord de mer - Nice' },
-    type: 'studio',
-    isFeatured: false,
-    images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Nice' },
-    pricePerNight: 8000,
-    bedrooms: 1,
-    capacity: 2,
-    averageRating: 4.6,
-  },
-  {
-    _id: 'f5',
-    slug: 'maison-basque-biarritz',
-    title: { fr: 'Maison Basque vue ocean' },
-    type: 'house',
-    isFeatured: true,
-    images: ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Biarritz' },
-    pricePerNight: 18000,
-    bedrooms: 4,
-    capacity: 8,
-    averageRating: 4.9,
-  },
-  {
-    _id: 'f6',
-    slug: 'appartement-haussmannien-lyon',
-    title: { fr: 'Appartement Haussmannien' },
-    type: 'apartment',
-    isFeatured: false,
-    images: ['https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800&q=80&auto=format&fit=crop'],
-    location: { city: 'Lyon' },
-    pricePerNight: 11000,
-    bedrooms: 2,
-    capacity: 4,
-    averageRating: 4.5,
-  },
-];
 
 function serializeListing(l) {
   return {
@@ -224,14 +143,14 @@ export async function getServerSideProps() {
 
     const [featuredRaw, latestRaw, typeCounts, popularCities] = await Promise.all([
       // Vedettes
-      Listing.find({ isPublished: true, isFeatured: true })
+      Listing.find({ isFeatured: true })
         .sort({ averageRating: -1, createdAt: -1 })
         .limit(6)
         .populate('owner', 'name')
         .lean(),
 
       // Dernieres annonces
-      Listing.find({ isPublished: true })
+      Listing.find({})
         .sort({ createdAt: -1 })
         .limit(8)
         .populate('owner', 'name')
@@ -239,13 +158,13 @@ export async function getServerSideProps() {
 
       // Compteurs par type
       Listing.aggregate([
-        { $match: { isPublished: true } },
+        { $match: {} },
         { $group: { _id: '$type', count: { $sum: 1 } } },
       ]),
 
       // Villes populaires (top 8 par nombre d'annonces)
       Listing.aggregate([
-        { $match: { isPublished: true, 'location.city': { $exists: true, $ne: '' } } },
+        { $match: { 'location.city': { $exists: true, $ne: '' } } },
         { $group: { _id: '$location.city', count: { $sum: 1 }, region: { $first: '$location.region' } } },
         { $sort: { count: -1 } },
         { $limit: 8 },
@@ -268,8 +187,8 @@ export async function getServerSideProps() {
 
     return {
       props: {
-        featured: featured.length > 0 ? featured : FALLBACK_LISTINGS,
-        latest: latest.length > 0 ? latest : FALLBACK_LISTINGS,
+        featured,
+        latest,
         typeCounts: typeCountMap,
         cities,
       },
@@ -278,8 +197,8 @@ export async function getServerSideProps() {
     console.error('[HOME] Erreur fetch:', error.message);
     return {
       props: {
-        featured: FALLBACK_LISTINGS,
-        latest: FALLBACK_LISTINGS,
+        featured: [],
+        latest: [],
         typeCounts: {},
         cities: [],
       },
