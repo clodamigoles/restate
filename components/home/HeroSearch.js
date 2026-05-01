@@ -482,7 +482,7 @@ export default function HeroSearch({ cities = [] }) {
         {/* Arrival */}
         <button
           onClick={() => setActiveField(activeField === 'arrival' ? null : 'arrival')}
-          className={`group relative flex flex-1 items-center gap-3 border-t border-border/50 px-6 py-4 text-left transition-all lg:border-t-0 lg:py-0 ${
+          className={`group relative flex flex-1 items-center gap-3 border-t border-border/50 px-6 py-4 text-left transition-all lg:border-t-0 lg:border-r lg:border-r-border/60 lg:py-0 ${
             activeField === 'arrival' ? 'bg-muted/50' : 'hover:bg-muted/30'
           }`}
         >
@@ -511,8 +511,6 @@ export default function HeroSearch({ cities = [] }) {
         <MobilePanel visible={activeField === 'arrival'} title="Dates">
           {renderCalendarContent()}
         </MobilePanel>
-
-        <div className="hidden h-10 w-px self-center bg-border/60 lg:block" />
 
         {/* Departure */}
         <button

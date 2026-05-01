@@ -382,3 +382,68 @@ body {
 .route-progress-bar {
   animation: route-progress 1.5s ease-out forwards;
 }
+
+/* ─── Availability Calendar ─────────────────────────────── */
+.cal-availability .rdp-root {
+  --rdp-accent-color:                    hsl(var(--primary));
+  --rdp-accent-background-color:         hsl(var(--primary) / 0.12);
+  --rdp-range_middle-background-color:   hsl(var(--primary) / 0.12);
+  --rdp-range_middle-color:              hsl(var(--foreground));
+  --rdp-range_start-date-background-color: hsl(var(--primary));
+  --rdp-range_end-date-background-color:   hsl(var(--primary));
+  --rdp-range_start-color:               hsl(var(--primary-foreground));
+  --rdp-range_end-color:                 hsl(var(--primary-foreground));
+  --rdp-today-color:                     hsl(var(--primary));
+  --rdp-selected-border:                 none;
+  --rdp-day_button-border-radius:        8px;
+  --rdp-disabled-opacity:                1; /* géré par modificateur */
+  --rdp-outside-opacity:                 0.3;
+}
+
+/* Boutons de navigation */
+.cal-availability .rdp-button_previous,
+.cal-availability .rdp-button_next {
+  border: 1px solid hsl(var(--border));
+  border-radius: 8px;
+  background: hsl(var(--card));
+  transition: background 0.15s;
+}
+.cal-availability .rdp-button_previous:hover:not(:disabled),
+.cal-availability .rdp-button_next:hover:not(:disabled) {
+  background: hsl(var(--muted));
+}
+.cal-availability .rdp-chevron {
+  fill: hsl(var(--foreground) / 0.7);
+}
+
+/* Dates passées : barrées + très atténuées */
+.cal-availability .cal-day-past {
+  text-decoration: line-through;
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+/* Dates réservées/bloquées : barrées + fond rose rayé */
+.cal-availability .cal-day-booked {
+  text-decoration: line-through;
+  color: hsl(0 65% 55%);
+  background: repeating-linear-gradient(
+    -45deg,
+    hsl(0 90% 97%),
+    hsl(0 90% 97%) 3px,
+    hsl(0 90% 93%) 3px,
+    hsl(0 90% 93%) 6px
+  );
+  cursor: not-allowed;
+  opacity: 1 !important;
+}
+.dark .cal-availability .cal-day-booked {
+  color: hsl(0 65% 55%);
+  background: repeating-linear-gradient(
+    -45deg,
+    hsl(0 40% 10%),
+    hsl(0 40% 10%) 3px,
+    hsl(0 40% 8%)  3px,
+    hsl(0 40% 8%)  6px
+  );
+}

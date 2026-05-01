@@ -26,12 +26,13 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const { data, mutate, isLoading } = useSWR(id ? `/api/bookings/${id}` : null, fetcher);
-  const [, dispatch] = usePayPalScriptReducer();
+  const [{ isResolved: paypalReady }, dispatch] = usePayPalScriptReducer();
 
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [paypalKey, setPaypalKey] = useState(0);
   const [bankDetails, setBankDetails] = useState(null);
   const [bankLoading, setBankLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -84,13 +85,16 @@ export default function BookingDetailPage() {
   function handleMethodChange(method) {
     setPaymentMethod(method);
     setPaymentError('');
-    // Charger le SDK PayPal à la demande
     if (method === 'paypal') {
-      dispatch({ type: 'setLoadingStatus', value: 'pending' });
+      setPaypalKey((k) => k + 1);
+      // Ne recharger le SDK que s'il n'est pas encore résolu
+      if (!paypalReady) {
+        dispatch({ type: 'setLoadingStatus', value: 'pending' });
+      }
     }
   }
 
-  if (isLoading) {
+  if (!router.isReady || isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="space-y-4">
@@ -195,6 +199,7 @@ export default function BookingDetailPage() {
 
                     {paymentMethod === 'paypal' && (
                       <PayPalButton
+                        key={paypalKey}
                         bookingId={id}
                         onSuccess={() => { setPaymentSuccess(true); mutate(); }}
                         onError={(e) => setPaymentError(e)}
@@ -228,7 +233,7 @@ export default function BookingDetailPage() {
                   <>
                     <PaymentMethodSelect
                       value={paymentMethod || 'bank_transfer'}
-                      onChange={(m) => { setPaymentMethod(m); setPaymentError(''); }}
+                      onChange={handleMethodChange}
                     />
 
                     {paymentError && <p className="text-sm text-destructive">{paymentError}</p>}
@@ -245,6 +250,7 @@ export default function BookingDetailPage() {
 
                     {paymentMethod === 'paypal' && (
                       <PayPalButton
+                        key={paypalKey}
                         bookingId={id}
                         onSuccess={() => { setPaymentSuccess(true); mutate(); }}
                         onError={(e) => setPaymentError(e)}
