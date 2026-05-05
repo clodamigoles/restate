@@ -1,7 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, cloneElement } from 'react';
 import { useRouter } from 'next/router';
 import dbConnect from '@/lib/db';
 import Listing from '@/models/Listing';
@@ -845,8 +845,8 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
 
 function Spec({ icon, label }) {
   return (
-    <div className="flex items-center gap-3 rounded-full border px-5 py-2 text-sm text-muted-foreground">
-      <span className="h-4 w-4 shrink-0">{icon}</span>
+    <div className="flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm text-muted-foreground">
+      {cloneElement(icon, { className: 'h-3.5 w-3.5 shrink-0' })}
       <span>{label}</span>
     </div>
   );

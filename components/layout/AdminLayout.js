@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Building2, CalendarDays, CreditCard, Users,
   LogOut, Menu, X, ChevronRight, Home, Settings,
 } from 'lucide-react';
+import { useSiteSettings } from '@/lib/contexts/SiteSettingsContext';
 
 const NAV_ITEMS = [
   { href: '/dlt', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -18,6 +19,9 @@ const NAV_ITEMS = [
 export default function AdminLayout({ children, title, breadcrumb }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { siteName } = useSiteSettings();
+  const name = siteName || 'Restate';
+  const initial = name.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await fetch('/api/auth/admin-code', { method: 'DELETE' });
@@ -47,10 +51,10 @@ export default function AdminLayout({ children, title, breadcrumb }) {
         <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
           <Link href="/" className="group flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shadow-sm">
-              <span className="font-display text-lg font-bold text-primary-foreground">R</span>
+              <span className="font-display text-lg font-bold text-primary-foreground">{initial}</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-base font-semibold tracking-tight">Restate</span>
+              <span className="font-display text-base font-semibold tracking-tight">{name}</span>
               <span className="text-[9px] font-semibold uppercase tracking-widest text-accent">Admin</span>
             </div>
           </Link>

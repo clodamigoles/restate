@@ -196,6 +196,159 @@ async function generateAdditionalReviews(groqKey, rawJson, needed) {
   return Array.isArray(parsed.reviews) ? parsed.reviews : [];
 }
 
+// ─── Gallery image extraction ───────────────────────────────────────────────
+
+function extractGalleryImages(html, pageUrl) {
+  const found = new Set();
+
+  const resolveUrl = (src) => {
+    if (!src) return null;
+    // Dé-échapper les slashes encodés dans les JSON inline (ex: "https:\/\/cdn…")
+    const s = src.replace(/\\\//g, '/');
+    if (s.startsWith('data:')) return null;
+    if (s.startsWith('//')) return 'https:' + s;
+    if (s.startsWith('http')) return s;
+    try { return new URL(s, pageUrl).href; } catch { return null; }
+  };
+
+  const isPhoto = (url) => {
+    if (!url || !url.startsWith('http')) return false;
+    const u = url.toLowerCase().split('?')[0];
+    if (u.endsWith('.svg') || u.endsWith('.gif')) return false;
+    if (/\/(logo|icon|favicon|avatar|sprite|badge|banner)[^/]*$/.test(u)) return false;
+    if (/[_-](icon|logo|avatar|thumb\d*)\.(jpg|webp|png)$/.test(u)) return false;
+    return (
+      /\.(jpg|jpeg|webp|png)$/.test(u) ||
+      /\/(photo|image|img|media|galerie|gallery|picture|slide|visuel)s?\//.test(u)
+    );
+  };
+
+  // Parse largest URL from a srcset string
+  const parseSrcset = (srcset) => {
+    if (!srcset) return null;
+    let best = null, bestW = 0;
+    for (const part of srcset.trim().split(/\s*,\s*/)) {
+      const [url, descriptor] = part.trim().split(/\s+/);
+      const w = descriptor ? parseInt(descriptor) : 0;
+      if (w > bestW || !best) { best = url; bestW = w; }
+    }
+    return best;
+  };
+
+  // Strategy 1 – find gallery container sections in the raw HTML
+  const galleryTerms = [
+    'gallery', 'galerie', 'carousel', 'swiper', 'lightbox',
+    'fancybox', 'slider', 'photos', 'visuels', 'pictures', 'slideshow',
+  ];
+  const htmlLow = html.toLowerCase();
+  const galleryPositions = [];
+
+  for (const term of galleryTerms) {
+    let idx = 0;
+    while ((idx = htmlLow.indexOf(term, idx)) !== -1) {
+      const before = htmlLow.slice(Math.max(0, idx - 30), idx);
+      if (/(?:class|id)\s*=\s*["'][^"']*$/.test(before)) galleryPositions.push(idx);
+      idx++;
+    }
+  }
+
+  for (const pos of galleryPositions) {
+    const chunk = html.slice(Math.max(0, pos - 300), Math.min(html.length, pos + 40000));
+
+    // <img> tags – prefer data-full/data-large/data-zoom over thumbnail src
+    const imgRe = /<img\b([^>]*)>/gi;
+    let m;
+    while ((m = imgRe.exec(chunk)) !== null) {
+      const attrs = m[1];
+      const candidates = [
+        attrs.match(/\bdata-(?:full|large|original|zoom|image|src)\s*=\s*["']([^"']+)["']/i)?.[1],
+        (() => { const ss = attrs.match(/\bsrcset\s*=\s*["']([^"']+)["']/i)?.[1]; return ss ? parseSrcset(ss) : null; })(),
+        attrs.match(/\bsrc\s*=\s*["']([^"']+)["']/i)?.[1],
+      ];
+      for (const c of candidates) {
+        if (!c) continue;
+        const url = resolveUrl(c);
+        if (url && isPhoto(url)) { found.add(url); break; }
+      }
+    }
+
+    // <a href="…photo…"> – lightbox links to full-size images
+    const aRe = /<a\b([^>]*)>/gi;
+    while ((m = aRe.exec(chunk)) !== null) {
+      const hrefMatch = m[1].match(/\bhref\s*=\s*["']([^"']+)["']/i);
+      if (hrefMatch) {
+        const url = resolveUrl(hrefMatch[1]);
+        if (url && isPhoto(url)) found.add(url);
+      }
+    }
+  }
+
+  // Strategy 2 – images with explicit gallery data attributes
+  const dataGalleryRe = /<(?:img|a)\b[^>]*\bdata-(?:gallery|lightbox|fancybox|group)\b[^>]*>/gi;
+  let dgm;
+  while ((dgm = dataGalleryRe.exec(html)) !== null) {
+    const tag = dgm[0];
+    const urlMatch = tag.match(/\b(?:href|src|data-src|data-original|data-full)\s*=\s*["']([^"']+)["']/i);
+    if (urlMatch) {
+      const url = resolveUrl(urlMatch[1]);
+      if (url && isPhoto(url)) found.add(url);
+    }
+  }
+
+  // Strategy 3 – mine ALL <script> tags for embedded image URLs
+  // Les lightbox/galeries modernes (React, Vue, Nuxt, Next.js, etc.) stockent toutes
+  // les photos dans window.__NEXT_DATA__, __NUXT__, JSON-LD, ou des tableaux JS inline.
+  // C'est ici que se trouvent les photos non affichées initialement (popup/galerie complète).
+  const scriptTagRe = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+  let stm;
+  while ((stm = scriptTagRe.exec(html)) !== null) {
+    const script = stm[1];
+    if (!script.trim()) continue;
+
+    // URLs absolues https:// terminant par une extension photo
+    const httpRe = /["'`](https?:\/\/[^"'`\s<>{}[\]\\]+\.(?:jpg|jpeg|webp|png)(?:\?[^"'`\s<>{}[\]\\]*)?)["'`]/gi;
+    let hm;
+    while ((hm = httpRe.exec(script)) !== null) {
+      const url = resolveUrl(hm[1]);
+      if (url && isPhoto(url)) found.add(url);
+    }
+
+    // URLs protocol-relative (//cdn.example.com/…)
+    const relRe = /["'`](\/\/[^"'`\s<>{}[\]\\]+\.(?:jpg|jpeg|webp|png)(?:\?[^"'`\s<>{}[\]\\]*)?)["'`]/gi;
+    let rm;
+    while ((rm = relRe.exec(script)) !== null) {
+      const url = resolveUrl(rm[1]);
+      if (url && isPhoto(url)) found.add(url);
+    }
+  }
+
+  // Strategy 4 – cluster analysis fallback when still nothing found
+  if (found.size < 3) {
+    const groups = new Map();
+    const broadRe = /\b(?:src|data-src|href|data-original|data-full)\s*=\s*["']([^"']+\.(?:jpg|jpeg|webp|png)[^"']*)["']/gi;
+    let bm;
+    while ((bm = broadRe.exec(html)) !== null) {
+      const url = resolveUrl(bm[1].split('?')[0]);
+      if (!url || !isPhoto(url)) continue;
+      try {
+        const u = new URL(url);
+        const prefix = u.hostname + u.pathname.split('/').slice(0, -1).join('/');
+        if (!groups.has(prefix)) groups.set(prefix, []);
+        groups.get(prefix).push(url);
+      } catch {}
+    }
+    let bestCluster = [];
+    for (const cluster of groups.values()) {
+      if (cluster.length > bestCluster.length) bestCluster = cluster;
+    }
+    if (bestCluster.length >= 3) bestCluster.forEach((u) => found.add(u));
+  }
+
+  return [...found].slice(0, 60);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 async function scrapeHandler(req, res) {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL requise' });
@@ -223,6 +376,9 @@ async function scrapeHandler(req, res) {
       : `Impossible de récupérer la page : ${e.message}`;
     return res.status(422).json({ success: false, error: msg });
   }
+
+  // Extraire les images de la galerie AVANT de nettoyer le HTML
+  const galleryImages = extractGalleryImages(html, url);
 
   // Nettoyer le HTML → texte lisible
   const text = html
@@ -398,7 +554,7 @@ async function scrapeHandler(req, res) {
     }
   }
 
-  return res.json({ success: true, data, reviews });
+  return res.json({ success: true, data, reviews, galleryImages });
 }
 
 async function handler(req, res) {

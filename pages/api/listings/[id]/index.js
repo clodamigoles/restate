@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import Listing from '@/models/Listing';
+import '@/models/User';
 import { withAdminOrAuth } from '@/middleware/withAdminOrAuth';
 import { errorHandler } from '@/middleware/errorHandler';
 import { createLocalizedField } from '@/lib/i18n';

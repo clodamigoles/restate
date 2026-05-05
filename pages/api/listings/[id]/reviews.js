@@ -2,6 +2,7 @@ import dbConnect from '@/lib/db';
 import Review from '@/models/Review';
 import Booking from '@/models/Booking';
 import Listing from '@/models/Listing';
+import '@/models/User';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
 import mongoose from 'mongoose';

@@ -141,6 +141,8 @@ function serializeListing(l) {
 export async function getServerSideProps() {
   try {
     await dbConnect();
+    // Enregistre le schéma User avant tout populate('owner')
+    await import('@/models/User');
 
     const [featuredRaw, latestRaw, typeCounts, popularCities] = await Promise.all([
       // Vedettes

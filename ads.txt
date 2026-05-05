@@ -1,15 +1,29 @@
-1. https://www.gites.fr/d/56382235?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR#sm-lightbox
+1. https://www.gites.fr/d/56382235
 
-2. https://www.gites.fr/d/65166982?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+2. https://www.gites.fr/d/65166982
 
-3. https://www.gites.fr/d/63940428?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+3. https://www.gites.fr/d/63940428
 
-4. https://www.gites.fr/d/44000493?adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&childrenAges=%2C&kidsFacilities=CHILDFRIENDLY&adultsAges=%2C&locale=fr-FR&currency=EUR&searchTerm=Occitanie%2C+France&selectedUnits=u%3D44000493%2Cr%3D%7E%2Cc%3D%7E%2Ca%3D%257C%2Ck%3D%257C&ctx=-cmQvH4pXB
+4. https://www.gites.fr/d/44000493
 
-5. https://www.gites.fr/d/56275913?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+5. https://www.gites.fr/d/56275913
 
-6. https://www.gites.fr/d/45458330?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+6. https://www.gites.fr/d/45458330
 
-7. https://www.gites.fr/d/4608427?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+7. https://www.gites.fr/d/4608427
 
-8. https://www.gites.fr/d/47036496?searchTerm=Occitanie%2C+France&adults=2&children=2&propertyType=VACATION_HOME&includeGroupIds=59138331&pageSize=30&asyncSubscriptions=true&kidsFacilities=CHILDFRIENDLY&hasGConfig=false&searchMultiUnits=true&locale=fr-FR&currency=EUR&ctx=-cmQvH4pXB
+8. https://www.gites.fr/d/47036496
+
+14. https://www.gites.fr/d/63184815
+
+15. https://www.gites.fr/d/63296360
+
+16. https://www.gites.fr/d/4608407
+
+17. https://www.gites.fr/d/63300630
+
+18. https://www.gites.fr/d/50482058
+
+19. https://www.gites.fr/d/32010105
+
+20. https://www.gites.fr/d/51095365

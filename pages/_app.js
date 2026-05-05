@@ -6,6 +6,7 @@ import Layout from '@/components/layout/Layout';
 import { Toaster } from '@/components/ui/Toaster';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import RouteProgressBar from '@/components/ui/RouteProgressBar';
+import { SiteSettingsProvider } from '@/lib/contexts/SiteSettingsContext';
 import { useState, useCallback } from 'react';
 
 const inter = Inter({
@@ -29,22 +30,24 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
 
   return (
     <SessionProvider session={session}>
-      <PayPalScriptProvider
-        options={{
-          clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'test',
-          currency: 'EUR',
-          intent: 'capture',
-        }}
-        deferLoading={true}
-      >
-        <div className={`${inter.variable} ${playfair.variable} font-sans`}>
-          {!appReady && <LoadingScreen onFinish={handleLoadingFinish} />}
-          <RouteProgressBar />
-          <Toaster>
-            {getLayout(<Component {...pageProps} />)}
-          </Toaster>
-        </div>
-      </PayPalScriptProvider>
+      <SiteSettingsProvider>
+        <PayPalScriptProvider
+          options={{
+            clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'test',
+            currency: 'EUR',
+            intent: 'capture',
+          }}
+          deferLoading={true}
+        >
+          <div className={`${inter.variable} ${playfair.variable} font-sans`}>
+            {!appReady && <LoadingScreen onFinish={handleLoadingFinish} />}
+            <RouteProgressBar />
+            <Toaster>
+              {getLayout(<Component {...pageProps} />)}
+            </Toaster>
+          </div>
+        </PayPalScriptProvider>
+      </SiteSettingsProvider>
     </SessionProvider>
   );
 }

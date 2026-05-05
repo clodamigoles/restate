@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useLocale } from '@/hooks/useLocale';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useSiteSettings } from '@/lib/contexts/SiteSettingsContext';
 
 const LANGUAGES = [
   { code: 'fr', label: 'Francais', flag: 'FR' },
@@ -26,6 +27,10 @@ export default function Header() {
   const router = useRouter();
   const { locale, setLocale } = useLocale();
   const { currency, setCurrency, currencies, currencyCodes } = useCurrency(locale);
+  const siteSettings = useSiteSettings();
+  const siteName = siteSettings.siteName || 'Restate';
+  const siteTagline = siteSettings.tagline || 'Premium Living';
+  const siteInitial = siteName.charAt(0).toUpperCase();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -153,15 +158,15 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="group relative flex items-center gap-2.5">
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md shadow-primary/20 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-primary/30">
-              <span className="font-display text-xl font-bold text-primary-foreground transition-transform duration-300 group-hover:scale-110">R</span>
+              <span className="font-display text-xl font-bold text-primary-foreground transition-transform duration-300 group-hover:scale-110">{siteInitial}</span>
               <div className="absolute -inset-1 rounded-xl bg-accent/20 opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100" />
             </div>
             <div className="flex flex-col">
               <span className="font-display text-xl font-semibold tracking-tight text-foreground">
-                Restate
+                {siteName}
               </span>
               <span className="hidden text-[10px] font-medium uppercase tracking-[0.2em] text-accent lg:block">
-                Premium Living
+                {siteTagline}
               </span>
             </div>
           </Link>
@@ -338,9 +343,9 @@ export default function Header() {
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <Link href="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-                <span className="font-display text-lg font-bold text-primary-foreground">R</span>
+                <span className="font-display text-lg font-bold text-primary-foreground">{siteInitial}</span>
               </div>
-              <span className="font-display text-lg font-semibold">Restate</span>
+              <span className="font-display text-lg font-semibold">{siteName}</span>
             </Link>
             <button
               onClick={() => setMobileOpen(false)}

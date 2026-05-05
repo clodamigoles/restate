@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import Listing from '@/models/Listing';
+import '@/models/User';
 import { errorHandler } from '@/middleware/errorHandler';
 
 async function handler(req, res) {

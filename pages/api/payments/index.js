@@ -1,5 +1,6 @@
 import dbConnect from '@/lib/db';
 import Payment from '@/models/Payment';
+import '@/models/User';
 import { withAdmin } from '@/middleware/withAdmin';
 import { errorHandler } from '@/middleware/errorHandler';
 
