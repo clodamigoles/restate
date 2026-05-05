@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DayPicker } from 'react-day-picker';
 import { fr } from 'date-fns/locale';
-import { isBefore, isAfter, startOfDay, addDays, isSameDay } from 'date-fns';
+import { isBefore, isAfter, startOfDay, addDays, isSameDay, format } from 'date-fns';
 import 'react-day-picker/src/style.css';
 
-// DayButton personnalisé : reçoit `modifiers` de react-day-picker v9
 function CalDayButton({ day, modifiers, className, children, ...buttonProps }) {
   return (
     <button
@@ -27,6 +26,8 @@ export default function AvailabilityCalendar({
   extraDisabledRanges = [],
   range,
   onRangeChange,
+  minNights = 1,
+  maxNights,
 }) {
   const [bookedRanges, setBookedRanges] = useState([]);
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -71,7 +72,6 @@ export default function AvailabilityCalendar({
     return earliest;
   }, [range, allDisabled]);
 
-  // Matcher pour bloquer l'interaction
   const disabledMatcher = useCallback((date) => {
     const d = startOfDay(date);
     if (isBefore(d, today)) return true;
@@ -80,10 +80,7 @@ export default function AvailabilityCalendar({
     return false;
   }, [today, allDisabled, checkoutCutoff]);
 
-  // Modifier visuel : dates passées (avant aujourd'hui)
-  const pastMatcher = useMemo(() => ({ before: today }), [today]);
-
-  // Modifier visuel : dates réservées/bloquées à venir
+  const pastMatcher  = useMemo(() => ({ before: today }), [today]);
   const bookedMatcher = useCallback((date) => {
     const d = startOfDay(date);
     if (isBefore(d, today)) return false;
@@ -96,45 +93,116 @@ export default function AvailabilityCalendar({
     if (val.from && val.to) onRangeSelect?.(val.from, val.to);
   }
 
-  const pickingCheckout = range?.from && !range?.to;
+  const hasArrival   = !!range?.from;
+  const hasDeparture = !!range?.to;
+  const step         = hasArrival && !hasDeparture ? 2 : 1;
+
+  const arrivalLabel = hasArrival
+    ? format(range.from, "d MMM yyyy", { locale: fr })
+    : null;
+
+  const departureLabel = hasDeparture
+    ? format(range.to, "d MMM yyyy", { locale: fr })
+    : null;
+
+  const minDepartureLabel = hasArrival && minNights > 1
+    ? format(addDays(range.from, minNights), "d MMM", { locale: fr })
+    : null;
+
+  const maxDepartureLabel = hasArrival && maxNights
+    ? format(addDays(range.from, maxNights), "d MMM", { locale: fr })
+    : null;
 
   return (
-    <div className="cal-availability overflow-hidden rounded-xl border bg-card shadow-lg">
-      {/* Guidage contextuel */}
-      <div className="border-b px-4 py-2.5 text-xs text-muted-foreground">
-        {pickingCheckout ? (
-          <span className="font-medium text-primary">
-            Arrivée le {range.from.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} — choisissez votre date de départ
+    <div className="cal-availability overflow-hidden rounded-xl border bg-card shadow-sm">
+
+      {/* ── Indicateur d'étapes ── */}
+      <div className="divide-y border-b">
+
+        {/* Étape 1 — Arrivée */}
+        <div className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+          step === 1 && !hasArrival ? 'bg-primary/5' : ''
+        }`}>
+          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+            hasArrival
+              ? 'bg-emerald-500 text-white'
+              : 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+          }`}>
+            {hasArrival ? '✓' : '1'}
           </span>
-        ) : (
-          <span>Sélectionnez votre date d&apos;arrivée</span>
-        )}
+          <div className="min-w-0 flex-1">
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${
+              hasArrival ? 'text-emerald-600' : 'text-primary'
+            }`}>
+              Arrivée
+            </p>
+            <p className={`text-sm font-semibold ${
+              hasArrival ? 'text-foreground' : 'text-muted-foreground'
+            }`}>
+              {arrivalLabel ?? 'Cliquez sur votre date d\'arrivée'}
+            </p>
+          </div>
+        </div>
+
+        {/* Étape 2 — Départ */}
+        <div className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+          step === 2 ? 'bg-primary/5' : ''
+        }`}>
+          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+            hasDeparture
+              ? 'bg-emerald-500 text-white'
+              : step === 2
+              ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+              : 'border-2 border-muted-foreground/25 text-muted-foreground/50'
+          }`}>
+            {hasDeparture ? '✓' : '2'}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className={`text-[10px] font-bold uppercase tracking-widest ${
+              hasDeparture ? 'text-emerald-600' : step === 2 ? 'text-primary' : 'text-muted-foreground/60'
+            }`}>
+              Départ
+            </p>
+            <p className={`text-sm font-semibold ${
+              hasDeparture
+                ? 'text-foreground'
+                : step === 2
+                ? 'text-muted-foreground'
+                : 'text-muted-foreground/50'
+            }`}>
+              {departureLabel ?? (
+                step === 2
+                  ? minDepartureLabel
+                    ? `Au plus tôt le ${minDepartureLabel}${maxDepartureLabel ? `, au plus tard le ${maxDepartureLabel}` : ''}`
+                    : 'Cliquez sur votre date de départ'
+                  : 'Après avoir choisi votre arrivée'
+              )}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Légende */}
-      <div className="flex items-center gap-5 border-b px-4 py-2 text-[11px] text-muted-foreground">
+      {/* ── Légende ── */}
+      <div className="flex items-center gap-5 border-b bg-muted/20 px-4 py-2 text-[11px] text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded" style={{
-            background: 'repeating-linear-gradient(-45deg, hsl(0 90% 97%), hsl(0 90% 97%) 3px, hsl(0 90% 93%) 3px, hsl(0 90% 93%) 6px)',
-          }}>
-            <span className="text-[10px] font-medium leading-none text-rose-500" style={{ textDecoration: 'line-through' }}>
-              8
-            </span>
+          <span
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded"
+            style={{
+              background: 'repeating-linear-gradient(-45deg, hsl(0 90% 97%), hsl(0 90% 97%) 3px, hsl(0 90% 93%) 3px, hsl(0 90% 93%) 6px)',
+            }}
+          >
+            <span className="text-[9px] font-semibold text-rose-400 line-through">5</span>
           </span>
           Réservé
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded bg-muted/60">
-            <span className="text-[10px] font-medium leading-none opacity-30" style={{ textDecoration: 'line-through' }}>
-              8
-            </span>
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-muted/70">
+            <span className="text-[9px] font-semibold opacity-30 line-through">5</span>
           </span>
           Passé
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="flex h-5 w-5 items-center justify-center rounded bg-primary/10">
-            <span className="text-[10px] font-medium leading-none text-primary">8</span>
-          </span>
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary/50" />
           Disponible
         </span>
       </div>

@@ -58,7 +58,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>Inscription</CardTitle>
-          <CardDescription>Créez votre compte Restate</CardDescription>
+          <CardDescription>Créez votre compte Maxo Destinations</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">

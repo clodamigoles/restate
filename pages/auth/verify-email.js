@@ -69,8 +69,8 @@ export default function VerifyEmailPage() {
               </Button>
               <p className="text-xs text-muted-foreground">
                 Si le problème persiste, contactez{' '}
-                <a href="mailto:contact@restate.com" className="underline">
-                  contact@restate.com
+                <a href="mailto:support@maxodestinations.com" className="underline">
+                  support@maxodestinations.com
                 </a>
               </p>
             </div>

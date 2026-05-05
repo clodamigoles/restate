@@ -28,7 +28,7 @@ export default function Header() {
   const { locale, setLocale } = useLocale();
   const { currency, setCurrency, currencies, currencyCodes } = useCurrency(locale);
   const siteSettings = useSiteSettings();
-  const siteName = siteSettings.siteName || 'Restate';
+  const siteName = siteSettings.siteName || 'Maxo Destinations';
   const siteTagline = siteSettings.tagline || 'Premium Living';
   const siteInitial = siteName.charAt(0).toUpperCase();
   const [mobileOpen, setMobileOpen] = useState(false);

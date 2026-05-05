@@ -6,7 +6,7 @@ import {
   detectBrowserLocale,
 } from '@/lib/i18n';
 
-const STORAGE_KEY = 'restate-locale';
+const STORAGE_KEY = 'maxo-locale';
 
 /**
  * Hook pour gerer la locale courante.

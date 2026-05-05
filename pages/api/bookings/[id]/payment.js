@@ -36,7 +36,7 @@ async function getPayment(req, res) {
   const bankDetails = {
     iban: cfg?.bankIban || process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
     bic: cfg?.bankBic || process.env.BANK_BIC || 'XXXXXXXX',
-    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Restate SAS',
+    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Maxo Destinations SAS',
     reference: payment.transferReference,
     amount: booking.totalPrice,
   };
@@ -82,7 +82,7 @@ async function postPayment(req, res) {
   }
 
   // Générer une référence unique pour le virement
-  const reference = `RESTATE-${booking._id.toString().slice(-6).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const reference = `MAXO-${booking._id.toString().slice(-6).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
   const payment = await Payment.findOneAndUpdate(
     { booking: id, method: 'bank_transfer' },
@@ -104,7 +104,7 @@ async function postPayment(req, res) {
   const bankDetails = {
     iban: cfg?.bankIban || process.env.BANK_IBAN || 'FR76 0000 0000 0000 0000 0000 000',
     bic: cfg?.bankBic || process.env.BANK_BIC || 'XXXXXXXX',
-    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Restate SAS',
+    beneficiary: cfg?.bankBeneficiary || process.env.BANK_NAME || 'Maxo Destinations SAS',
     reference,
     amount: booking.totalPrice,
   };

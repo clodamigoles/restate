@@ -224,17 +224,20 @@ export default function HomePage({ featured, latest, typeCounts, cities }) {
   return (
     <>
       {/* ─── HERO ─── */}
-      <section className="relative min-h-[85vh] overflow-hidden">
-        <Image
-          src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80&auto=format&fit=crop"
-          alt=""
-          fill
-          priority
-          className="object-cover"
-          sizes="100vw"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[300px] w-[600px] rounded-full bg-accent/[0.08] blur-[120px]" />
+      <section className="relative min-h-[85vh]">
+        {/* Arrière-plan décoratif — clippé séparément pour ne pas couper les dropdowns */}
+        <div className="absolute inset-0 overflow-hidden">
+          <Image
+            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1920&q=80&auto=format&fit=crop"
+            alt=""
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-black/70" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[300px] w-[600px] rounded-full bg-accent/[0.08] blur-[120px]" />
+        </div>
 
         <div className="relative mx-auto flex min-h-[85vh] max-w-7xl flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-4xl text-center">
@@ -265,7 +268,7 @@ export default function HomePage({ featured, latest, typeCounts, cities }) {
       </section>
 
       {/* ─── TYPES DE BIENS ─── */}
-      <section className="py-10">
+      <section className="relative py-10">
         <div className="mx-auto max-w-7xl">
           <div className="mb-5 flex items-center justify-between px-5 sm:px-6">
             <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
@@ -395,7 +398,7 @@ export default function HomePage({ featured, latest, typeCounts, cities }) {
                   Dernieres annonces
                 </h2>
                 <p className="mt-2 text-muted-foreground">
-                  Les toutes dernieres locations ajoutees sur Restate.
+                  Les toutes dernieres locations ajoutees sur Maxo Destinations.
                 </p>
               </div>
               <Link

@@ -13,7 +13,7 @@ import PaymentMethodSelect from '@/components/payments/PaymentMethodSelect';
 import PaymentStatusBadge from '@/components/payments/PaymentStatusBadge';
 import BankTransferInfo from '@/components/payments/BankTransferInfo';
 import { Button } from '@/components/ui/Button';
-import { MapPin, ChevronRight, Clock, Download } from 'lucide-react';
+import { MapPin, ChevronRight, Clock, Download, Info } from 'lucide-react';
 import { usePayPalScriptReducer } from '@paypal/react-paypal-js';
 
 // Chargé côté client uniquement (dépendance PayPal)
@@ -122,7 +122,7 @@ export default function BookingDetailPage() {
 
   return (
     <>
-      <Head><title>Réservation — {listing?.title?.fr || listing?.title} — Restate</title></Head>
+      <Head><title>Réservation — {listing?.title?.fr || listing?.title} — Maxo Destinations</title></Head>
       <div className="mx-auto max-w-3xl px-4 py-8">
 
         {/* Fil d'ariane */}
@@ -191,6 +191,18 @@ export default function BookingDetailPage() {
                   </div>
                 ) : (
                   <>
+                    <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                      <p>
+                        Le remboursement n&apos;est valable que jusqu&apos;à{' '}
+                        <strong>24h avant votre date d&apos;arrivée</strong>
+                        {booking.checkIn && (
+                          <> ({format(new Date(booking.checkIn), 'd MMMM yyyy', { locale: fr })})</>
+                        )}
+                        .
+                      </p>
+                    </div>
+
                     <PaymentMethodSelect value={paymentMethod} onChange={handleMethodChange} />
 
                     {paymentError && (
@@ -231,6 +243,18 @@ export default function BookingDetailPage() {
                   </div>
                 ) : (
                   <>
+                    <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                      <p>
+                        Le remboursement n&apos;est valable que jusqu&apos;à{' '}
+                        <strong>24h avant votre date d&apos;arrivée</strong>
+                        {booking.checkIn && (
+                          <> ({format(new Date(booking.checkIn), 'd MMMM yyyy', { locale: fr })})</>
+                        )}
+                        .
+                      </p>
+                    </div>
+
                     <PaymentMethodSelect
                       value={paymentMethod || 'bank_transfer'}
                       onChange={handleMethodChange}

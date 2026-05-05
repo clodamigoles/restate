@@ -1,4 +1,4 @@
-# Restate — Plan de Développement
+# Maxo Destinations — Plan de Développement
 
 ## Contexte
 Plateforme web de location courte durée (type Airbnb) pour agence immobilière.
@@ -23,7 +23,7 @@ Next.js 16 | Pages Router | JavaScript | MongoDB/Mongoose | Tailwind v4 + shadcn
 ## Structure du projet
 
 ```
-restate/
+maxo/
 ├── components/
 │   ├── ui/              # shadcn/ui (Button, Input, Card, Dialog, Table, etc.)
 │   ├── layout/          # Header, Footer, Layout, AdminLayout, Sidebar

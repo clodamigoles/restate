@@ -34,14 +34,14 @@ export function emailLayout({ title, preheader = '', content }) {
   ${preheader ? `<span style="display:none;max-height:0;overflow:hidden;">${preheader}</span>` : ''}
   <div class="wrapper">
     <div class="header">
-      <h1>Restate</h1>
+      <h1>Maxo Destinations</h1>
     </div>
     <div class="body">
       ${content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Restate — Location courte durée</p>
-      <p>Vous recevez cet email car vous avez un compte sur Restate.</p>
+      <p>© ${new Date().getFullYear()} Maxo Destinations — Location courte durée</p>
+      <p>Vous recevez cet email car vous avez un compte sur Maxo Destinations.</p>
     </div>
   </div>
 </body>

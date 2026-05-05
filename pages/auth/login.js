@@ -40,7 +40,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle>Connexion</CardTitle>
-          <CardDescription>Connectez-vous à votre compte Restate</CardDescription>
+          <CardDescription>Connectez-vous à votre compte Maxo Destinations</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">

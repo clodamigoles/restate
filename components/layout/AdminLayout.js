@@ -20,7 +20,7 @@ export default function AdminLayout({ children, title, breadcrumb }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { siteName } = useSiteSettings();
-  const name = siteName || 'Restate';
+  const name = siteName || 'Maxo Destinations';
   const initial = name.charAt(0).toUpperCase();
 
   const handleLogout = async () => {

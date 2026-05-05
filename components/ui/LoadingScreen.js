@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
+import { useSiteSettings } from '@/lib/contexts/SiteSettingsContext';
 
 export default function LoadingScreen({ onFinish }) {
+  const siteSettings  = useSiteSettings();
+  const siteName      = siteSettings.siteName  || 'Maxo';
+  const siteTagline   = siteSettings.tagline   || "Locations d’exception";
+  const siteInitial   = siteName.charAt(0).toUpperCase();
   const [phase, setPhase] = useState(0); // 0: enter, 1: logo, 2: exit
   const canvasRef = useRef(null);
 
@@ -177,7 +182,7 @@ export default function LoadingScreen({ onFinish }) {
             <div className="relative">
               <div className="loading-logo-glow absolute -inset-2 rounded-2xl bg-accent/20 blur-xl" />
               <div className="flex h-18 w-18 items-center justify-center rounded-2xl bg-primary shadow-2xl shadow-primary/30 loading-logo-breathe">
-                <span className="font-display text-4xl font-bold text-primary-foreground">R</span>
+                <span className="font-display text-4xl font-bold text-primary-foreground">{siteInitial}</span>
               </div>
             </div>
 
@@ -198,7 +203,7 @@ export default function LoadingScreen({ onFinish }) {
           }`}
         >
           <h1 className="font-display text-4xl font-semibold tracking-tight text-foreground">
-            {'Restate'.split('').map((letter, i) => (
+            {siteName.split('').map((letter, i) => (
               <span
                 key={i}
                 className="inline-block loading-letter-float"
@@ -235,7 +240,7 @@ export default function LoadingScreen({ onFinish }) {
             phase >= 1 ? 'translate-y-0 opacity-100 tracking-widest' : 'translate-y-3 opacity-0 tracking-normal'
           }`}
         >
-          Locations d&apos;exception
+          {siteTagline}
         </p>
       </div>
 

@@ -9,7 +9,7 @@ import {
 } from '@/lib/currencies';
 import { DEFAULT_LOCALE } from '@/lib/i18n';
 
-const STORAGE_KEY = 'restate-currency';
+const STORAGE_KEY = 'maxo-currency';
 
 /**
  * Hook pour gerer la devise courante.

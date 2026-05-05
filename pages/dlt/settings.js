@@ -86,7 +86,7 @@ export default function SettingsPage() {
         {/* ── Identité du site ── */}
         <Section icon={<Globe className="h-4 w-4 text-primary" />} title="Identité du site">
           <Field label="Nom du site" id="siteName" name="siteName"
-            value={values.siteName} onChange={set} placeholder="Restate" />
+            value={values.siteName} onChange={set} placeholder="Maxo Destinations" />
           <Field label="Slogan / tagline" id="tagline" name="tagline"
             value={values.tagline} onChange={set} placeholder="Premium Living" />
           <Field label="Description courte" id="siteDescription" name="siteDescription"
@@ -142,7 +142,7 @@ export default function SettingsPage() {
         {/* ── Coordonnées bancaires ── */}
         <Section icon={<Landmark className="h-4 w-4 text-primary" />} title="Coordonnées bancaires">
           <Field label="Bénéficiaire" id="bankBeneficiary" name="bankBeneficiary"
-            value={values.bankBeneficiary} onChange={set} placeholder="Restate SAS" />
+            value={values.bankBeneficiary} onChange={set} placeholder="Maxo Destinations SAS" />
           <Field label="IBAN" id="bankIban" name="bankIban"
             value={values.bankIban} onChange={set}
             placeholder="FR76 0000 0000 0000 0000 0000 000" mono />

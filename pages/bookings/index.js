@@ -32,7 +32,7 @@ export default function BookingsPage() {
 
   return (
     <>
-      <Head><title>Mes réservations — Restate</title></Head>
+      <Head><title>Mes réservations — Maxo Destinations</title></Head>
       <div className="mx-auto max-w-3xl px-4 py-8">
         <h1 className="text-2xl font-bold">Mes réservations</h1>
 

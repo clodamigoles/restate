@@ -141,9 +141,10 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
   }
 
   function handleOpenCalendar() {
-    setCalendarRange({ from: undefined, to: undefined });
-    setCheckIn('');
-    setCheckOut('');
+    // Pré-remplir le calendrier avec les dates existantes si elles existent
+    const prevFrom = checkIn ? new Date(checkIn) : undefined;
+    const prevTo   = checkOut ? new Date(checkOut) : undefined;
+    setCalendarRange({ from: prevFrom, to: prevTo });
     setBookingError('');
     setGuestStep('idle');
     setGuestError('');
@@ -267,7 +268,7 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
   return (
     <>
       <Head>
-        <title>{getLocalizedField(listing.title)} — Restate</title>
+        <title>{getLocalizedField(listing.title)} — Maxo Destinations</title>
         <meta name="description" content={getLocalizedField(listing.description)?.slice(0, 155)} />
       </Head>
 
@@ -651,34 +652,12 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
               )}
 
               <form onSubmit={handleBook} className="space-y-3">
-                {/* Dates — cliquables pour ouvrir le calendrier */}
-                <div className="relative" ref={calendarRef}>
-                  <div
-                    className={`grid cursor-pointer grid-cols-2 overflow-hidden rounded-lg border transition-colors ${showCalendar ? 'border-primary ring-1 ring-primary/30' : 'hover:border-primary'}`}
-                    onClick={handleOpenCalendar}
-                  >
-                    <div className={`border-r p-3 ${showCalendar && !calendarRange.from ? 'bg-primary/5' : ''}`}>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Arrivée</p>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
-                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        {checkIn
-                          ? new Date(checkIn).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-                          : <span className="text-muted-foreground">Choisir</span>}
-                      </p>
-                    </div>
-                    <div className={`p-3 ${showCalendar && calendarRange.from && !calendarRange.to ? 'bg-primary/5' : ''}`}>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Départ</p>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
-                        <CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        {checkOut
-                          ? new Date(checkOut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
-                          : <span className="text-muted-foreground">Choisir</span>}
-                      </p>
-                    </div>
-                  </div>
+                {/* ── Sélecteur de dates ── */}
+                <div ref={calendarRef}>
 
-                  {showCalendar && (
-                    <div className="absolute left-0 right-0 z-50 mt-2 lg:left-auto lg:right-0 lg:w-max">
+                  {/* Calendrier inline — visible pendant la sélection */}
+                  {showCalendar ? (
+                    <div className="space-y-2">
                       <AvailabilityCalendar
                         listingId={listing._id}
                         onRangeSelect={handleCalendarSelect}
@@ -686,8 +665,97 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
                         extraDisabledRanges={extraDisabledRanges}
                         range={calendarRange}
                         onRangeChange={setCalendarRange}
+                        minNights={listing.minNights || 1}
+                        maxNights={listing.maxNights || undefined}
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowCalendar(false)}
+                        className="w-full rounded-lg border py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                      >
+                        Annuler
+                      </button>
                     </div>
+
+                  ) : checkIn && checkOut ? (
+                    /* Résumé compact — dates sélectionnées */
+                    <div className="overflow-hidden rounded-xl border shadow-sm">
+                      <div className="grid grid-cols-[1fr_48px_1fr]">
+
+                        {/* Arrivée */}
+                        <button
+                          type="button"
+                          onClick={handleOpenCalendar}
+                          className="group flex flex-col gap-0.5 p-3 text-left transition-colors hover:bg-primary/5"
+                        >
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white">✓</span>
+                            Arrivée
+                          </span>
+                          <span className="text-base font-bold text-foreground">
+                            {new Date(checkIn).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(checkIn).toLocaleDateString('fr-FR', { year: 'numeric' })}
+                          </span>
+                        </button>
+
+                        {/* Compteur de nuits */}
+                        <div className="flex flex-col items-center justify-center border-x bg-muted/30">
+                          <span className="text-lg font-extrabold leading-none text-primary">{nights}</span>
+                          <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            nuit{nights > 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {/* Départ */}
+                        <button
+                          type="button"
+                          onClick={handleOpenCalendar}
+                          className="group flex flex-col gap-0.5 p-3 text-left transition-colors hover:bg-primary/5"
+                        >
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-600">
+                            <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[8px] font-bold text-white">✓</span>
+                            Départ
+                          </span>
+                          <span className="text-base font-bold text-foreground">
+                            {new Date(checkOut).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(checkOut).toLocaleDateString('fr-FR', { year: 'numeric' })}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Modifier */}
+                      <button
+                        type="button"
+                        onClick={handleOpenCalendar}
+                        className="flex w-full items-center justify-center gap-1.5 border-t py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/5"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        Modifier les dates
+                      </button>
+                    </div>
+
+                  ) : (
+                    /* Aucune date — CTA d'invite */
+                    <button
+                      type="button"
+                      onClick={handleOpenCalendar}
+                      className="group w-full rounded-xl border-2 border-dashed border-primary/30 px-4 py-6 text-center transition-all hover:border-primary/60 hover:bg-primary/5"
+                    >
+                      <CalendarDays className="mx-auto h-7 w-7 text-muted-foreground transition-colors group-hover:text-primary" />
+                      <p className="mt-2 text-sm font-semibold text-foreground">Choisissez vos dates</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Sélectionnez votre arrivée puis votre départ
+                      </p>
+                      {listing.minNights > 1 && (
+                        <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-700">
+                          Séjour minimum : {listing.minNights} nuits
+                        </p>
+                      )}
+                    </button>
                   )}
                 </div>
 

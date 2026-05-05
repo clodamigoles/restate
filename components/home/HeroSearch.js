@@ -308,86 +308,167 @@ export default function HeroSearch({ cities = [] }) {
     </>
   );
 
-  const renderCalendarContent = () => (
-    <>
-      {/* Tabs arrivee / depart */}
-      <div className="flex border-b border-border">
-        <button
-          onClick={() => setActiveField('arrival')}
-          className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium transition-all ${
-            activeField === 'arrival'
-              ? 'border-b-2 border-accent text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Calendar className="h-3.5 w-3.5" />
-          Arrivee
-          {arrivalDate && (
-            <span className="ml-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-              {formatDateShort(arrivalDate)}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveField('departure')}
-          className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-medium transition-all ${
-            activeField === 'departure'
-              ? 'border-b-2 border-accent text-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Calendar className="h-3.5 w-3.5" />
-          Depart
-          {departureDate && (
-            <span className="ml-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-              {formatDateShort(departureDate)}
-            </span>
-          )}
-        </button>
-      </div>
+  const renderCalendarContent = () => {
+    const hasArrival   = !!arrivalDate;
+    const hasDeparture = !!departureDate;
+    const step         = hasArrival && !hasDeparture ? 2 : 1;
+    const nights       = hasArrival && hasDeparture
+      ? Math.round((departureDate - arrivalDate) / 86400000)
+      : 0;
 
-      <div className="p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <button onClick={prevMonth} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+    return (
+      <>
+        {/* ── Indicateur d'étapes ── */}
+        <div className="grid grid-cols-2 divide-x border-b border-border">
+
+          {/* Étape 1 — Arrivée */}
+          <button
+            onClick={() => setActiveField('arrival')}
+            className={`flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+              activeField === 'arrival' ? 'bg-primary/5' : 'hover:bg-muted/30'
+            }`}
+          >
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+              hasArrival
+                ? 'bg-emerald-500 text-white'
+                : 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+            }`}>
+              {hasArrival ? '✓' : '1'}
+            </span>
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                hasArrival ? 'text-emerald-600' : 'text-primary'
+              }`}>
+                Arrivée
+              </p>
+              <p className={`truncate text-sm font-semibold ${
+                hasArrival ? 'text-foreground' : 'text-muted-foreground'
+              }`}>
+                {arrivalDate
+                  ? arrivalDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+                  : 'Choisissez votre arrivée'}
+              </p>
+            </div>
+          </button>
+
+          {/* Étape 2 — Départ */}
+          <button
+            onClick={() => hasArrival && setActiveField('departure')}
+            disabled={!hasArrival}
+            className={`flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+              activeField === 'departure'
+                ? 'bg-primary/5'
+                : hasArrival
+                ? 'hover:bg-muted/30'
+                : 'cursor-default'
+            }`}
+          >
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+              hasDeparture
+                ? 'bg-emerald-500 text-white'
+                : step === 2
+                ? 'bg-primary text-primary-foreground ring-2 ring-primary/30'
+                : 'border-2 border-muted-foreground/25 text-muted-foreground/40'
+            }`}>
+              {hasDeparture ? '✓' : '2'}
+            </span>
+            <div className="min-w-0">
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${
+                hasDeparture ? 'text-emerald-600' : step === 2 ? 'text-primary' : 'text-muted-foreground/50'
+              }`}>
+                Départ
+              </p>
+              <p className={`truncate text-sm font-semibold ${
+                hasDeparture
+                  ? 'text-foreground'
+                  : step === 2
+                  ? 'text-muted-foreground'
+                  : 'text-muted-foreground/40'
+              }`}>
+                {departureDate
+                  ? departureDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+                  : step === 2
+                  ? 'Choisissez votre départ'
+                  : 'Après votre arrivée'}
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* ── Navigation des mois ── */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-0">
+          <button
+            onClick={prevMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button onClick={nextMonth} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <p className="text-xs font-semibold text-muted-foreground">
+            {MONTHS[calendarMonth.month]} {calendarMonth.year}
+            <span className="mx-2">·</span>
+            {MONTHS[getSecondMonth().month]} {getSecondMonth().year}
+          </p>
+          <button
+            onClick={nextMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
-          {renderMonth(calendarMonth, 'left')}
-          {renderMonth(getSecondMonth(), 'right')}
-        </div>
-      </div>
 
-      {/* Summary bar */}
-      <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
-        <div className="text-sm text-muted-foreground">
-          {arrivalDate && departureDate ? (
-            <span>
-              {formatDateShort(arrivalDate)} &rarr; {formatDateShort(departureDate)}
-              <span className="ml-2 font-medium text-foreground">
-                ({Math.round((departureDate - arrivalDate) / 86400000)} nuit{Math.round((departureDate - arrivalDate) / 86400000) > 1 ? 's' : ''})
-              </span>
-            </span>
-          ) : arrivalDate ? (
-            <span>Selectionnez la date de depart</span>
-          ) : (
-            <span>Selectionnez la date d&apos;arrivee</span>
-          )}
+        {/* ── Grilles calendrier ── */}
+        <div className="p-4 pt-3">
+          <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
+            {renderMonth(calendarMonth, 'left')}
+            {renderMonth(getSecondMonth(), 'right')}
+          </div>
         </div>
-        {arrivalDate && departureDate && (
-          <button
-            onClick={() => setActiveField('guests')}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90"
-          >
-            Appliquer
-          </button>
-        )}
-      </div>
-    </>
-  );
+
+        {/* ── Barre récapitulative ── */}
+        <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
+          <div className="text-sm">
+            {hasArrival && hasDeparture ? (
+              <span className="flex items-center gap-2 text-foreground">
+                <span className="font-semibold">{formatDateShort(arrivalDate)}</span>
+                <span className="text-muted-foreground">→</span>
+                <span className="font-semibold">{formatDateShort(departureDate)}</span>
+                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+                  {nights} nuit{nights > 1 ? 's' : ''}
+                </span>
+              </span>
+            ) : hasArrival ? (
+              <span className="text-muted-foreground">
+                Arrivée le{' '}
+                <span className="font-semibold text-foreground">{formatDateShort(arrivalDate)}</span>
+                {' '}— choisissez le départ
+              </span>
+            ) : (
+              <span className="text-muted-foreground">Sélectionnez votre date d&apos;arrivée</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {(hasArrival || hasDeparture) && (
+              <button
+                onClick={() => { setArrivalDate(null); setDepartureDate(null); setActiveField('arrival'); }}
+                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Effacer
+              </button>
+            )}
+            {hasArrival && hasDeparture && (
+              <button
+                onClick={() => setActiveField('guests')}
+                className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/90"
+              >
+                Appliquer
+              </button>
+            )}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   const renderGuestsContent = () => (
     <>
@@ -479,25 +560,56 @@ export default function HeroSearch({ cities = [] }) {
 
         <div className="hidden h-10 w-px self-center bg-border/60 lg:block" />
 
-        {/* Arrival */}
+        {/* Champ dates combiné — arrivée & départ */}
         <button
-          onClick={() => setActiveField(activeField === 'arrival' ? null : 'arrival')}
-          className={`group relative flex flex-1 items-center gap-3 border-t border-border/50 px-6 py-4 text-left transition-all lg:border-t-0 lg:border-r lg:border-r-border/60 lg:py-0 ${
-            activeField === 'arrival' ? 'bg-muted/50' : 'hover:bg-muted/30'
+          onClick={() => {
+            const next = !arrivalDate ? 'arrival' : !departureDate ? 'departure' : 'arrival';
+            setActiveField(calendarOpen ? null : next);
+          }}
+          className={`group relative flex flex-[2] items-center gap-3 border-t border-border/50 px-6 py-4 text-left transition-all lg:border-t-0 lg:border-r lg:border-r-border/60 lg:py-0 ${
+            calendarOpen ? 'bg-muted/50' : 'hover:bg-muted/30'
           }`}
         >
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
-            activeField === 'arrival' ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-accent/10 text-accent'
+            calendarOpen ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-accent/10 text-accent'
           }`}>
             <Calendar className="h-4.5 w-4.5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Arrivee</p>
-            <p className={`truncate text-sm font-medium ${arrivalDate ? 'text-foreground' : 'text-muted-foreground/60'}`}>
-              {formatDateShort(arrivalDate) || 'Selectionner'}
-            </p>
-          </div>
-          {arrivalDate && (
+
+          {(arrivalDate || departureDate) ? (
+            /* Dates sélectionnées — affichage bicolonne */
+            <div className="flex flex-1 min-w-0 items-center gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Arrivée</p>
+                <p className={`truncate text-sm font-medium ${arrivalDate ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                  {formatDateShort(arrivalDate) || 'Sélectionner'}
+                </p>
+              </div>
+              <div className="shrink-0 px-1">
+                {arrivalDate && departureDate ? (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary whitespace-nowrap">
+                    {Math.round((departureDate - arrivalDate) / 86400000)} nuit{Math.round((departureDate - arrivalDate) / 86400000) > 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground/30">→</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Départ</p>
+                <p className={`truncate text-sm font-medium ${departureDate ? 'text-foreground' : 'text-muted-foreground/50'}`}>
+                  {formatDateShort(departureDate) || 'Sélectionner'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Aucune date */
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Dates</p>
+              <p className="truncate text-sm font-medium text-muted-foreground/60">Arrivée &amp; Départ</p>
+            </div>
+          )}
+
+          {(arrivalDate || departureDate) && (
             <span
               onClick={(e) => { e.stopPropagation(); setArrivalDate(null); setDepartureDate(null); }}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-foreground/10"
@@ -507,41 +619,8 @@ export default function HeroSearch({ cities = [] }) {
           )}
         </button>
 
-        {/* Mobile: calendar inline after arrival */}
-        <MobilePanel visible={activeField === 'arrival'} title="Dates">
-          {renderCalendarContent()}
-        </MobilePanel>
-
-        {/* Departure */}
-        <button
-          onClick={() => setActiveField(activeField === 'departure' ? null : 'departure')}
-          className={`group relative flex flex-1 items-center gap-3 border-t border-border/50 px-6 py-4 text-left transition-all lg:border-t-0 lg:py-0 ${
-            activeField === 'departure' ? 'bg-muted/50' : 'hover:bg-muted/30'
-          }`}
-        >
-          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${
-            activeField === 'departure' ? 'bg-accent text-accent-foreground shadow-md shadow-accent/20' : 'bg-accent/10 text-accent'
-          }`}>
-            <Calendar className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Depart</p>
-            <p className={`truncate text-sm font-medium ${departureDate ? 'text-foreground' : 'text-muted-foreground/60'}`}>
-              {formatDateShort(departureDate) || 'Selectionner'}
-            </p>
-          </div>
-          {departureDate && (
-            <span
-              onClick={(e) => { e.stopPropagation(); setDepartureDate(null); }}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-foreground/10"
-            >
-              <X className="h-3 w-3" />
-            </span>
-          )}
-        </button>
-
-        {/* Mobile: calendar inline after departure */}
-        <MobilePanel visible={activeField === 'departure'} title="Dates">
+        {/* Mobile: panneau calendrier unique */}
+        <MobilePanel visible={calendarOpen} title="Dates">
           {renderCalendarContent()}
         </MobilePanel>
 
@@ -587,7 +666,7 @@ export default function HeroSearch({ cities = [] }) {
       {/* ─── Desktop Dropdown Panels (absolute positioned, hidden on mobile) ─── */}
 
       {/* Destination */}
-      <div className={`absolute left-0 right-0 z-50 mt-2 hidden transition-all duration-300 top-full lg:left-0 lg:right-auto lg:w-[420px] ${
+      <div className={`absolute left-0 right-0 z-[200] mt-2 hidden transition-all duration-300 top-full lg:left-0 lg:right-auto lg:w-[420px] ${
         activeField === 'destination' ? 'lg:block translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
       }`}>
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/[0.1]">
@@ -596,7 +675,7 @@ export default function HeroSearch({ cities = [] }) {
       </div>
 
       {/* Calendar */}
-      <div className={`absolute left-0 right-0 z-50 mt-2 hidden transition-all duration-300 top-full lg:left-1/2 lg:-translate-x-1/2 lg:w-[620px] ${
+      <div className={`absolute left-0 right-0 z-[200] mt-2 hidden transition-all duration-300 top-full lg:left-1/2 lg:-translate-x-1/2 lg:w-[620px] ${
         calendarOpen ? 'lg:block translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
       }`}>
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/[0.1]">
@@ -605,7 +684,7 @@ export default function HeroSearch({ cities = [] }) {
       </div>
 
       {/* Guests */}
-      <div className={`absolute right-0 z-50 mt-2 hidden transition-all duration-300 top-full lg:left-auto lg:w-[340px] ${
+      <div className={`absolute right-0 z-[200] mt-2 hidden transition-all duration-300 top-full lg:left-auto lg:w-[340px] ${
         activeField === 'guests' ? 'lg:block translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'
       }`}>
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-2xl shadow-black/[0.1]">

@@ -50,7 +50,7 @@ export default function Footer() {
                 <span className="text-lg font-bold text-primary-foreground">{initial}</span>
               </div>
               <span className="font-display text-xl font-semibold tracking-tight">
-                {s.siteName || 'Restate'}
+                {s.siteName || 'Maxo Destinations'}
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
@@ -149,7 +149,7 @@ export default function Footer() {
         {/* Bottom */}
         <div className="mt-12 flex flex-col items-center gap-4 border-t border-border pt-6 sm:flex-row sm:justify-between">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} {s.siteName || 'Restate'}. Tous droits réservés.
+            &copy; {new Date().getFullYear()} {s.siteName || 'Maxo Destinations'}. Tous droits réservés.
           </p>
           <div className="flex gap-6 text-xs text-muted-foreground">
             <span className="cursor-pointer transition-colors hover:text-foreground">Mentions légales</span>

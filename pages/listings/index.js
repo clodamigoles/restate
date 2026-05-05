@@ -59,13 +59,13 @@ export default function ListingsPage({ listings, pagination, query }) {
   });
 
   const city = query.city ? `a ${query.city}` : '';
-  const title = `Annonces${city ? ' ' + city : ''} — Restate`;
+  const title = `Annonces${city ? ' ' + city : ''} — Maxo Destinations`;
 
   return (
     <>
       <Head>
         <title>{title}</title>
-        <meta name="description" content={`Trouvez votre logement ideal${city ? ' ' + city : ''} sur Restate.`} />
+        <meta name="description" content={`Trouvez votre logement ideal${city ? ' ' + city : ''} sur Maxo Destinations.`} />
       </Head>
 
       <div className="mx-auto max-w-7xl px-4 py-8">
