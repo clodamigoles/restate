@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import {
-  Landmark, CheckCircle2, Globe, Mail, Phone, MapPin, Loader2,
+  Landmark, CheckCircle2, Globe, Mail, Phone, MapPin, Loader2, Scale,
 } from 'lucide-react';
 
 function IconFacebook({ className }) {
@@ -30,6 +30,8 @@ const EMPTY = {
   emailFrom: '',
   socialFacebook: '', socialInstagram: '', socialTwitter: '', socialYoutube: '',
   bankIban: '', bankBic: '', bankBeneficiary: '',
+  legalDirector: '', legalCompanyType: '', legalCapital: '',
+  legalSiret: '', legalRcs: '', legalVat: '',
 };
 
 export default function SettingsPage() {
@@ -137,6 +139,35 @@ export default function SettingsPage() {
             value={values.socialYoutube} onChange={set}
             placeholder="https://youtube.com/@monsite"
             icon={<IconYoutube className="h-3.5 w-3.5 text-muted-foreground" />} />
+        </Section>
+
+        {/* ── Mentions légales ── */}
+        <Section icon={<Scale className="h-4 w-4 text-primary" />} title="Mentions légales">
+          <p className="text-xs text-muted-foreground -mt-1">
+            Ces informations apparaissent sur la page{' '}
+            <a href="/mentions-legales" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+              /mentions-legales
+            </a>
+            , obligatoire selon la loi française (LCEN).
+          </p>
+          <Field label="Directeur de la publication" id="legalDirector" name="legalDirector"
+            value={values.legalDirector} onChange={set}
+            placeholder="Prénom NOM (gérant ou responsable légal)" />
+          <Field label="Forme juridique" id="legalCompanyType" name="legalCompanyType"
+            value={values.legalCompanyType} onChange={set}
+            placeholder="SAS / SARL / EURL / Auto-entrepreneur…" />
+          <Field label="Capital social" id="legalCapital" name="legalCapital"
+            value={values.legalCapital} onChange={set}
+            placeholder="ex : 10 000 €" />
+          <Field label="Numéro SIRET" id="legalSiret" name="legalSiret"
+            value={values.legalSiret} onChange={set}
+            placeholder="000 000 000 00000" mono />
+          <Field label="RCS (numéro + ville)" id="legalRcs" name="legalRcs"
+            value={values.legalRcs} onChange={set}
+            placeholder="ex : Paris B 123 456 789" mono />
+          <Field label="Numéro de TVA intracommunautaire" id="legalVat" name="legalVat"
+            value={values.legalVat} onChange={set}
+            placeholder="ex : FR XX 123 456 789" mono />
         </Section>
 
         {/* ── Coordonnées bancaires ── */}

@@ -26,6 +26,14 @@ const SettingsSchema = new mongoose.Schema({
   bankIban:        { type: String, default: '' },
   bankBic:         { type: String, default: '' },
   bankBeneficiary: { type: String, default: '' },
+
+  // Mentions légales
+  legalDirector:     { type: String, default: '' }, // Directeur de la publication
+  legalCompanyType:  { type: String, default: '' }, // Forme juridique (SAS, SARL…)
+  legalCapital:      { type: String, default: '' }, // Capital social
+  legalSiret:        { type: String, default: '' }, // Numéro SIRET
+  legalRcs:          { type: String, default: '' }, // Numéro RCS + ville
+  legalVat:          { type: String, default: '' }, // Numéro TVA intracommunautaire
 }, { timestamps: true });
 
 export default mongoose.models.Settings || mongoose.model('Settings', SettingsSchema);

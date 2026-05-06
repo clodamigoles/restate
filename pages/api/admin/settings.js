@@ -9,6 +9,8 @@ const FIELDS = [
   'emailFrom',
   'socialFacebook', 'socialInstagram', 'socialTwitter', 'socialYoutube',
   'bankIban', 'bankBic', 'bankBeneficiary',
+  'legalDirector', 'legalCompanyType', 'legalCapital',
+  'legalSiret', 'legalRcs', 'legalVat',
 ];
 
 function pick(obj) {

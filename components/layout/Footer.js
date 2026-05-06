@@ -152,9 +152,9 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} {s.siteName || 'Maxo Destinations'}. Tous droits réservés.
           </p>
           <div className="flex gap-6 text-xs text-muted-foreground">
-            <span className="cursor-pointer transition-colors hover:text-foreground">Mentions légales</span>
-            <span className="cursor-pointer transition-colors hover:text-foreground">Confidentialité</span>
-            <span className="cursor-pointer transition-colors hover:text-foreground">CGU</span>
+            <Link href="/mentions-legales" className="transition-colors hover:text-foreground">Mentions légales</Link>
+            <Link href="/confidentialite" className="transition-colors hover:text-foreground">Confidentialité</Link>
+            <Link href="/cgu" className="transition-colors hover:text-foreground">CGU</Link>
           </div>
         </div>
       </div>
