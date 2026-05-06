@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { Search, MapPin } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-export default function SearchBar({ initialCity = '' }) {
+export default function SearchBar({ initialQuery = '' }) {
   const router = useRouter();
-  const [city, setCity] = useState(initialCity);
+  const [query, setQuery] = useState(initialQuery);
 
   function handleSearch(e) {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (city) params.set('city', city);
+    if (query.trim()) params.set('q', query.trim());
     router.push(`/listings?${params.toString()}`);
   }
 
@@ -21,12 +21,12 @@ export default function SearchBar({ initialCity = '' }) {
       className="flex w-full max-w-2xl items-center overflow-hidden rounded-full border bg-background shadow-md"
     >
       <div className="flex flex-1 items-center gap-2 px-4">
-        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Destination, ville..."
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
+          placeholder="Villa avec piscine, chalet en montagne..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           className="border-0 bg-transparent shadow-none focus-visible:ring-0"
         />
       </div>

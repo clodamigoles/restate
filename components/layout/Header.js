@@ -37,6 +37,7 @@ export default function Header() {
   const [langOpen, setLangOpen] = useState(false);
   const [currencyOpen, setCurrencyOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const currentLang = LANGUAGES.find((l) => l.code === locale) || LANGUAGES[0];
   const currentCurrency = currencies[currency] || currencies.EUR;
@@ -78,6 +79,15 @@ export default function Header() {
   }, [mobileOpen]);
 
   const isActive = (path) => router.pathname === path || router.pathname.startsWith(path + '/');
+
+  function submitSearch(e) {
+    e?.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearchOpen(false);
+    setSearchQuery('');
+    router.push(`/listings?q=${encodeURIComponent(q)}`);
+  }
 
   return (
     <>
@@ -303,21 +313,36 @@ export default function Header() {
         <div className={`overflow-hidden border-t border-border/50 transition-all duration-300 ${
           searchOpen ? 'max-h-16 opacity-100' : 'max-h-0 border-t-transparent opacity-0'
         }`}>
-          <div className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-3">
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <form
+            onSubmit={submitSearch}
+            className="mx-auto flex max-w-7xl items-center gap-3 px-6 py-3"
+          >
+            <Sparkles className="h-4 w-4 shrink-0 text-primary" />
             <input
               type="text"
-              placeholder="Rechercher une ville, un type de bien, un mot-cle..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Villa avec piscine, chalet en montagne, appartement bord de mer..."
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               autoFocus={searchOpen}
             />
+            {searchQuery.trim() && (
+              <button
+                type="submit"
+                className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Rechercher
+              </button>
+            )}
             <button
-              onClick={() => setSearchOpen(false)}
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+              type="button"
+              onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+              className="text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
-          </div>
+          </form>
         </div>
       </header>
 

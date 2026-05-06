@@ -201,12 +201,11 @@ export default function HeroSearch({ cities = [] }) {
   // ─── Search ───
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (destination) params.set('location', destination);
-    if (arrivalDate) params.set('checkin', arrivalDate.toISOString().split('T')[0]);
-    if (departureDate) params.set('checkout', departureDate.toISOString().split('T')[0]);
-    if (guests.adults) params.set('adults', guests.adults);
-    if (guests.children) params.set('children', guests.children);
-    if (guests.rooms) params.set('rooms', guests.rooms);
+    if (destination) params.set('q', destination);
+    if (arrivalDate) params.set('checkIn', arrivalDate.toISOString().split('T')[0]);
+    if (departureDate) params.set('checkOut', departureDate.toISOString().split('T')[0]);
+    const totalCapacity = guests.adults + guests.children;
+    if (totalCapacity > 0) params.set('capacity', totalCapacity);
     router.push(`/listings?${params.toString()}`);
   };
 
