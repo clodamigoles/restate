@@ -4,8 +4,12 @@ import { put } from '@vercel/blob';
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 import Payment from '@/models/Payment';
+import User from '@/models/User';
+import Listing from '@/models/Listing';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
+import { sendEmail } from '@/lib/mail';
+import { adminNewReceiptEmail } from '@/email-templates/admin-notification';
 import mongoose from 'mongoose';
 
 export const config = {
@@ -67,6 +71,33 @@ async function handler(req, res) {
     { $push: { transferProofs: { $each: uploaded } } },
     { new: true }
   );
+
+  // Notification admin (non bloquante)
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    try {
+      const [user, listing] = await Promise.all([
+        User.findById(booking.user, 'name email'),
+        Listing.findById(booking.listing, 'title'),
+      ]);
+      if (user && listing) {
+        const adminUrl = `${process.env.NEXTAUTH_URL}/dlt/payments`;
+        const { subject, html } = adminNewReceiptEmail({
+          userName: user.name,
+          userEmail: user.email,
+          listing,
+          booking,
+          proofCount: payment.transferProofs.length,
+          adminUrl,
+        });
+        sendEmail({ to: adminEmail, subject, html }).catch((err) =>
+          console.error('[RECEIPT] Erreur email notification admin:', err.message)
+        );
+      }
+    } catch (err) {
+      console.error('[RECEIPT] Erreur lors de la notification admin:', err.message);
+    }
+  }
 
   return res.status(200).json({ success: true, data: { proofs: payment.transferProofs } });
 }

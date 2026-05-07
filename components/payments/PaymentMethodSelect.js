@@ -3,11 +3,17 @@ import { CreditCard, Building2 } from 'lucide-react';
 export default function PaymentMethodSelect({ value, onChange }) {
   const methods = [
     {
-      id: 'paypal',
-      label: 'PayPal',
-      description: 'Paiement sécurisé via PayPal. Confirmation immédiate.',
+      id: 'card',
+      label: 'Carte bancaire',
+      description: 'Paiement sécurisé par carte Visa, Mastercard ou American Express.',
       icon: <CreditCard className="h-5 w-5" />,
     },
+    // {
+    //   id: 'paypal',
+    //   label: 'PayPal',
+    //   description: 'Paiement sécurisé via PayPal. Confirmation immédiate.',
+    //   icon: <CreditCard className="h-5 w-5" />,
+    // },
     {
       id: 'bank_transfer',
       label: 'Virement bancaire',

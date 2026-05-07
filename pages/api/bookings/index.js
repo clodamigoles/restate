@@ -8,6 +8,7 @@ import { errorHandler } from '@/middleware/errorHandler';
 import { checkAvailability, calculatePrice } from '@/lib/availability';
 import { sendEmail } from '@/lib/mail';
 import { bookingConfirmationEmail } from '@/email-templates/booking-confirmation';
+import { adminNewBookingEmail } from '@/email-templates/admin-notification';
 
 async function handler(req, res) {
   await dbConnect();
@@ -118,10 +119,11 @@ async function createBooking(req, res) {
   // 5. Populate pour la réponse
   await booking.populate('listing', 'title images location slug checkInTime checkOutTime');
 
-  // 6. Email de confirmation (non bloquant)
+  // 6. Emails de confirmation (non bloquants)
   const user = await User.findById(req.user.id);
   if (user) {
     const bookingUrl = `${process.env.NEXTAUTH_URL}/bookings/${booking._id}`;
+
     const { subject, html } = bookingConfirmationEmail({
       userName: user.name,
       listing: booking.listing,
@@ -129,8 +131,23 @@ async function createBooking(req, res) {
       bookingUrl,
     });
     sendEmail({ to: user.email, subject, html }).catch((err) =>
-      console.error('[BOOKING] Erreur email confirmation:', err.message)
+      console.error('[BOOKING] Erreur email confirmation client:', err.message)
     );
+
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      const adminBookingUrl = `${process.env.NEXTAUTH_URL}/dlt/bookings/${booking._id}`;
+      const { subject: adminSubject, html: adminHtml } = adminNewBookingEmail({
+        userName: user.name,
+        userEmail: user.email,
+        listing: booking.listing,
+        booking,
+        adminUrl: adminBookingUrl,
+      });
+      sendEmail({ to: adminEmail, subject: adminSubject, html: adminHtml }).catch((err) =>
+        console.error('[BOOKING] Erreur email notification admin:', err.message)
+      );
+    }
   }
 
   return res.status(201).json({

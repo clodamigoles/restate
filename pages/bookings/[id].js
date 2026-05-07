@@ -2,7 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import useSWR from 'swr';
 import { format } from 'date-fns';
@@ -13,11 +13,11 @@ import PaymentMethodSelect from '@/components/payments/PaymentMethodSelect';
 import PaymentStatusBadge from '@/components/payments/PaymentStatusBadge';
 import BankTransferInfo from '@/components/payments/BankTransferInfo';
 import { Button } from '@/components/ui/Button';
-import { MapPin, ChevronRight, Clock, Download, Info } from 'lucide-react';
-import { usePayPalScriptReducer } from '@paypal/react-paypal-js';
+import { MapPin, ChevronRight, Clock, Info } from 'lucide-react';
+// import { usePayPalScriptReducer } from '@paypal/react-paypal-js';
 
-// Chargé côté client uniquement (dépendance PayPal)
-const PayPalButton = dynamic(() => import('@/components/payments/PayPalButton'), { ssr: false });
+// const PayPalButton = dynamic(() => import('@/components/payments/PayPalButton'), { ssr: false });
+const CreditCardForm = dynamic(() => import('@/components/payments/CreditCardForm'), { ssr: false });
 const QRCodeCanvas = dynamic(() => import('qrcode.react').then((m) => m.QRCodeCanvas), { ssr: false });
 
 const fetcher = (url) => fetch(url).then((r) => r.json());
@@ -26,13 +26,13 @@ export default function BookingDetailPage() {
   const router = useRouter();
   const { id } = router.query;
   const { data, mutate, isLoading } = useSWR(id ? `/api/bookings/${id}` : null, fetcher);
-  const [{ isResolved: paypalReady }, dispatch] = usePayPalScriptReducer();
+  // const [{ isResolved: paypalReady }, dispatch] = usePayPalScriptReducer();
 
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [paypalKey, setPaypalKey] = useState(0);
+  // const [paypalKey, setPaypalKey] = useState(0);
   const [bankDetails, setBankDetails] = useState(null);
   const [bankLoading, setBankLoading] = useState(false);
   const [paymentError, setPaymentError] = useState('');
@@ -40,7 +40,6 @@ export default function BookingDetailPage() {
 
   const booking = data?.data;
 
-  // Récupère les détails bancaires en temps réel (polling 30s) dès qu'un virement est en cours
   const isPendingTransfer = booking?.paymentStatus === 'pending';
   const { data: paymentData, mutate: mutatePayment } = useSWR(
     (isPendingTransfer || bankDetails) && id ? `/api/bookings/${id}/payment` : null,
@@ -48,7 +47,6 @@ export default function BookingDetailPage() {
     { refreshInterval: 30000 },
   );
 
-  // paymentData (fraîchement récupéré) a priorité sur bankDetails (valeur de session initiale)
   const resolvedBankDetails = paymentData?.data?.bankDetails || bankDetails || null;
   const resolvedProofs = paymentData?.data?.proofs || [];
 
@@ -85,13 +83,10 @@ export default function BookingDetailPage() {
   function handleMethodChange(method) {
     setPaymentMethod(method);
     setPaymentError('');
-    if (method === 'paypal') {
-      setPaypalKey((k) => k + 1);
-      // Ne recharger le SDK que s'il n'est pas encore résolu
-      if (!paypalReady) {
-        dispatch({ type: 'setLoadingStatus', value: 'pending' });
-      }
-    }
+    // if (method === 'paypal') {
+    //   setPaypalKey((k) => k + 1);
+    //   if (!paypalReady) dispatch({ type: 'setLoadingStatus', value: 'pending' });
+    // }
   }
 
   if (!router.isReady || isLoading) {
@@ -209,13 +204,17 @@ export default function BookingDetailPage() {
                       <p className="text-sm text-destructive">{paymentError}</p>
                     )}
 
-                    {paymentMethod === 'paypal' && (
+                    {/* {paymentMethod === 'paypal' && (
                       <PayPalButton
                         key={paypalKey}
                         bookingId={id}
                         onSuccess={() => { setPaymentSuccess(true); mutate(); }}
                         onError={(e) => setPaymentError(e)}
                       />
+                    )} */}
+
+                    {paymentMethod === 'card' && (
+                      <CreditCardForm bookingId={id} onError={(e) => setPaymentError(e)} />
                     )}
 
                     {paymentMethod === 'bank_transfer' && (
@@ -231,7 +230,7 @@ export default function BookingDetailPage() {
               </div>
             )}
 
-            {/* Virement en attente — sélecteur toujours visible + contenu selon choix */}
+            {/* Virement en attente */}
             {showBankTransferBlock && (
               <div className="rounded-xl border p-5 space-y-4">
                 <h2 className="text-lg font-semibold">Paiement</h2>
@@ -272,14 +271,18 @@ export default function BookingDetailPage() {
                       />
                     )}
 
-                    {paymentMethod === 'paypal' && (
+                    {paymentMethod === 'card' && (
+                      <CreditCardForm bookingId={id} onError={(e) => setPaymentError(e)} />
+                    )}
+
+                    {/* {paymentMethod === 'paypal' && (
                       <PayPalButton
                         key={paypalKey}
                         bookingId={id}
                         onSuccess={() => { setPaymentSuccess(true); mutate(); }}
                         onError={(e) => setPaymentError(e)}
                       />
-                    )}
+                    )} */}
                   </>
                 )}
               </div>

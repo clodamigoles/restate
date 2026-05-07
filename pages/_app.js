@@ -1,7 +1,7 @@
 import '@/styles/globals.css';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { SessionProvider } from 'next-auth/react';
-import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+// import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import Layout from '@/components/layout/Layout';
 import { Toaster } from '@/components/ui/Toaster';
 import LoadingScreen from '@/components/ui/LoadingScreen';
@@ -31,14 +31,14 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
   return (
     <SessionProvider session={session}>
       <SiteSettingsProvider>
-        <PayPalScriptProvider
+        {/* <PayPalScriptProvider
           options={{
             clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'test',
             currency: 'EUR',
             intent: 'capture',
           }}
           deferLoading={true}
-        >
+        > */}
           <div className={`${inter.variable} ${playfair.variable} font-sans`}>
             {!appReady && <LoadingScreen onFinish={handleLoadingFinish} />}
             <RouteProgressBar />
@@ -46,7 +46,7 @@ export default function App({ Component, pageProps: { session, ...pageProps } })
               {getLayout(<Component {...pageProps} />)}
             </Toaster>
           </div>
-        </PayPalScriptProvider>
+        {/* </PayPalScriptProvider> */}
       </SiteSettingsProvider>
     </SessionProvider>
   );

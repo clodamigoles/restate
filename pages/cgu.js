@@ -357,7 +357,7 @@ export default function CGU({ settings }) {
               {s.contactPhone && (
                 <li>Téléphone : <a href={`tel:${s.contactPhone}`} className="hover:underline text-foreground">{s.contactPhone}</a></li>
               )}
-              {s.contactAddress && <li>Courrier : {s.contactAddress}</li>}
+              {/* {s.contactAddress && <li>Courrier : {s.contactAddress}</li>} */}
             </ul>
           </section>
 

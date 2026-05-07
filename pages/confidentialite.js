@@ -32,7 +32,7 @@ export default function Confidentialite({ settings }) {
             Politique de confidentialité
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Dernière mise à jour : 1er janvier {year} — conforme au RGPD (Règlement UE 2016/679) et à la loi
+            Dernière mise à jour : 14 Octobre 2025 — conforme au RGPD (Règlement UE 2016/679) et à la loi
             Informatique et Libertés du 6 janvier 1978 modifiée.
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function Confidentialite({ settings }) {
               <strong className="text-foreground">{s.siteName}</strong>
               {s.legalCompanyType && <>, {s.legalCompanyType}</>}
               {s.legalSiret && <>, SIRET {s.legalSiret}</>}
-              {s.contactAddress && <>, dont le siège social est situé à {s.contactAddress}</>}.
+              {/* {s.contactAddress && <>, dont le siège social est situé à {s.contactAddress}</>}. */}
             </p>
             {s.contactEmail && (
               <p className="mt-2 text-muted-foreground">
@@ -161,7 +161,7 @@ export default function Confidentialite({ settings }) {
                 ['Droit à la portabilité', 'Recevoir vos données dans un format structuré et lisible (art. 20).'],
                 ['Droit d\'opposition', 'Vous opposer au traitement fondé sur l\'intérêt légitime (art. 21).'],
                 ['Droit de retrait du consentement', 'Retirer votre consentement à tout moment sans affecter les traitements antérieurs.'],
-                ['Droit de recours', 'Introduire une réclamation auprès de la CNIL (cnil.fr).'],
+                // ['Droit de recours', 'Introduire une réclamation auprès de la CNIL (cnil.fr).'],
               ].map(([title, desc]) => (
                 <div key={title} className="rounded-lg border border-border bg-muted/20 p-3">
                   <p className="font-medium text-foreground text-xs">{title}</p>
@@ -272,13 +272,13 @@ export default function Confidentialite({ settings }) {
               {s.contactPhone && (
                 <li>Téléphone : <a href={`tel:${s.contactPhone}`} className="hover:underline text-foreground">{s.contactPhone}</a></li>
               )}
-              {s.contactAddress && <li>Courrier : {s.contactAddress}</li>}
-              <li>
+              {/* {s.contactAddress && <li>Courrier : {s.contactAddress}</li>} */}
+              {/* <li>
                 CNIL :{' '}
                 <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                   cnil.fr/fr/plaintes
                 </a>
-              </li>
+              </li> */}
             </ul>
           </section>
 

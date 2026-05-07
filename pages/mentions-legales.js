@@ -173,11 +173,11 @@ export default function MentionsLegales({ settings }) {
               <a href={`mailto:${s.contactEmail}`} className="text-primary hover:underline">
                 {s.contactEmail}
               </a>.
-              Vous pouvez également introduire une réclamation auprès de la CNIL ({' '}
+              {/* Vous pouvez également introduire une réclamation auprès de la CNIL ({' '}
               <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                 cnil.fr
               </a>
-              ).
+              ). */}
             </p>
           </section>
 
@@ -276,17 +276,20 @@ export default function MentionsLegales({ settings }) {
                   </a>
                 </li>
               )}
-              {s.contactAddress && (
+              {/* {s.contactAddress && (
                 <li>Par courrier : {s.contactAddress}</li>
-              )}
+              )} */}
             </ul>
           </section>
 
           {/* Pied */}
           <div className="border-t border-border pt-8 text-xs text-muted-foreground">
-            <p>
+            {/* <p>
               Document généré le {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} —{' '}
               &copy; {year} {s.siteName}. Tous droits réservés.
+            </p> */}
+            <p>
+              Mis à jour le 23 février 2023 {s.siteName}. Tous droits réservés.
             </p>
             <div className="mt-3 flex flex-wrap gap-4">
               <Link href="/listings" className="hover:text-foreground transition-colors">Voir les annonces</Link>

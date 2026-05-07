@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { useSiteSettings } from '@/lib/contexts/SiteSettingsContext';
 
 function IconFacebook({ className }) {
@@ -134,12 +134,6 @@ export default function Footer() {
                   <a href={`tel:${s.contactPhone}`} className="hover:text-foreground transition-colors">
                     {s.contactPhone}
                   </a>
-                </li>
-              )}
-              {s.contactAddress && (
-                <li className="flex items-start gap-2.5">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-                  {s.contactAddress}
                 </li>
               )}
             </ul>
