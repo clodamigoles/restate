@@ -255,11 +255,11 @@ export default function CreditCardForm({ onError, bookingId }) {
             )}
           </button>
 
-          {/* Avertissement */}
+          {/* Avertissement
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-[12px] leading-relaxed text-amber-800">
             ⚠️ <strong>Ne saisissez pas vos vraies informations bancaires.</strong><br />
             Ce formulaire est fourni à titre indicatif uniquement — aucun paiement réel ne sera effectué.
-          </div>
+          </div> */}
 
           {/* Badge sécurité */}
           <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
