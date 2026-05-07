@@ -89,12 +89,39 @@ export default function BookingDetailPage() {
     // }
   }
 
-  if (!router.isReady || isLoading) {
+  // Garder le skeleton tant que : router pas prêt, SWR en cours, OU id connu mais aucune réponse encore reçue
+  if (!router.isReady || isLoading || (id && !data)) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="space-y-4">
-          <div className="h-8 w-64 animate-pulse rounded bg-muted" />
-          <div className="h-48 animate-pulse rounded-xl bg-muted" />
+        {/* Fil d'ariane */}
+        <div className="mb-4 h-4 w-48 animate-pulse rounded bg-muted" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+          <div className="lg:col-span-3 space-y-6">
+            {/* En-tête logement */}
+            <div className="flex gap-4 rounded-xl border p-4">
+              <div className="h-20 w-28 shrink-0 animate-pulse rounded-lg bg-muted" />
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="flex gap-2 pt-1">
+                  <div className="h-5 w-20 animate-pulse rounded-full bg-muted" />
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+                </div>
+              </div>
+            </div>
+            {/* Dates */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-20 animate-pulse rounded-lg border bg-muted" />
+              <div className="h-20 animate-pulse rounded-lg border bg-muted" />
+            </div>
+            {/* Bloc paiement */}
+            <div className="h-40 animate-pulse rounded-xl border bg-muted" />
+          </div>
+          {/* Récap */}
+          <div className="lg:col-span-2 space-y-3">
+            <div className="h-48 animate-pulse rounded-xl border bg-muted" />
+            <div className="h-9 animate-pulse rounded-lg bg-muted" />
+          </div>
         </div>
       </div>
     );
@@ -103,7 +130,7 @@ export default function BookingDetailPage() {
   if (!booking) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <p className="text-lg font-medium">Réservation introuvable</p>
+        <p className="text-lg font-medium">{data?.error || 'Réservation introuvable'}</p>
         <Button className="mt-4" asChild><Link href="/bookings">Mes réservations</Link></Button>
       </div>
     );

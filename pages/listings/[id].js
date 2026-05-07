@@ -226,7 +226,7 @@ export default function ListingDetailPage({ listing, reviews = [], subRatings = 
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: guestName, email: guestEmail, password: tempPassword }),
+        body: JSON.stringify({ name: guestName, email: guestEmail, password: tempPassword, guest: true }),
       });
       const data = await res.json();
       if (!data.success) { setGuestError(data.error); return; }

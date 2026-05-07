@@ -18,7 +18,7 @@ async function handler(req, res) {
 }
 
 async function register(req, res) {
-  const { name, email, password } = req.body;
+  const { name, email, password, guest } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ success: false, error: 'Nom, email et mot de passe requis' });
@@ -42,9 +42,16 @@ async function register(req, res) {
     emailVerifyToken,
   });
 
-  const verifyUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${emailVerifyToken}`;
-  const { subject, html } = welcomeEmail({ name, verifyUrl });
-  await sendEmail({ to: user.email, subject, html });
+  // Pas d'email de bienvenue pour les comptes pré-créés (guest) — ils recevront
+  // l'email de confirmation de réservation juste après.
+  // L'envoi est toujours fire-and-forget pour ne jamais bloquer la création de compte.
+  if (!guest) {
+    const verifyUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${emailVerifyToken}`;
+    const { subject, html } = welcomeEmail({ name, verifyUrl });
+    sendEmail({ to: user.email, subject, html }).catch((err) =>
+      console.error('[register] Erreur email bienvenue:', err.message)
+    );
+  }
 
   return res.status(201).json({
     success: true,

@@ -43,10 +43,10 @@ async function handler(req, res) {
     status: 'confirmed',
   });
 
-  // Email de confirmation de paiement
+  // Email de confirmation de paiement (fire-and-forget — ne bloque pas la validation)
   const booking = await Booking.findById(payment.booking).populate('listing', 'title location');
-  const user = await User.findById(payment.user);
-  if (booking && user) {
+  const user = await User.findById(payment.user).select('name email').lean();
+  if (booking && user?.email) {
     const bookingUrl = `${process.env.NEXTAUTH_URL}/bookings/${booking._id}`;
     const { subject, html } = paymentReceivedEmail({
       userName: user.name,
@@ -55,7 +55,9 @@ async function handler(req, res) {
       listing: booking.listing,
       bookingUrl,
     });
-    await sendEmail({ to: user.email, subject, html });
+    sendEmail({ to: user.email, subject, html }).catch((err) =>
+      console.error('[payment/validate] Erreur email confirmation paiement:', err.message)
+    );
   }
 
   return res.status(200).json({ success: true, data: payment });

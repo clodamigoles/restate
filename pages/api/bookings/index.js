@@ -1,7 +1,6 @@
 import dbConnect from '@/lib/db';
 import Booking from '@/models/Booking';
 import Listing from '@/models/Listing';
-import User from '@/models/User';
 import { withAdminOrAuth } from '@/middleware/withAdminOrAuth';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
@@ -120,17 +119,21 @@ async function createBooking(req, res) {
   await booking.populate('listing', 'title images location slug checkInTime checkOutTime');
 
   // 6. Emails de confirmation (non bloquants)
-  const user = await User.findById(req.user.id);
-  if (user) {
+  // On utilise directement req.user (session) — pas de DB lookup supplémentaire,
+  // ce qui garantit l'envoi même pour les comptes pré-créés sans profil complet.
+  const userEmail = req.user.email;
+  const userName = req.user.name;
+
+  if (userEmail) {
     const bookingUrl = `${process.env.NEXTAUTH_URL}/bookings/${booking._id}`;
 
     const { subject, html } = bookingConfirmationEmail({
-      userName: user.name,
+      userName,
       listing: booking.listing,
       booking,
       bookingUrl,
     });
-    sendEmail({ to: user.email, subject, html }).catch((err) =>
+    sendEmail({ to: userEmail, subject, html }).catch((err) =>
       console.error('[BOOKING] Erreur email confirmation client:', err.message)
     );
 
@@ -138,8 +141,8 @@ async function createBooking(req, res) {
     if (adminEmail) {
       const adminBookingUrl = `${process.env.NEXTAUTH_URL}/dlt/bookings/${booking._id}`;
       const { subject: adminSubject, html: adminHtml } = adminNewBookingEmail({
-        userName: user.name,
-        userEmail: user.email,
+        userName,
+        userEmail,
         listing: booking.listing,
         booking,
         adminUrl: adminBookingUrl,
