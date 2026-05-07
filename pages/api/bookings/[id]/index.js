@@ -48,7 +48,9 @@ async function getBooking(req, res) {
   }
 
   const { role, id: userId } = req.user;
-  if (role !== 'admin' && booking.user._id.toString() !== userId) {
+  // booking.user peut être null après populate si l'utilisateur a été supprimé
+  const ownerId = booking.user?._id?.toString() ?? null;
+  if (role !== 'admin' && ownerId !== userId) {
     return res.status(403).json({ success: false, error: 'Accès refusé' });
   }
 
