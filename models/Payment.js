@@ -20,7 +20,7 @@ const PaymentSchema = new mongoose.Schema(
     },
     method: {
       type: String,
-      enum: ['paypal', 'bank_transfer'],
+      enum: ['paypal', 'bank_transfer', 'card'],
       required: true,
     },
     status: {
@@ -35,6 +35,13 @@ const PaymentSchema = new mongoose.Schema(
     transferReference: String,
     transferProof: String,
     transferProofs: [String],
+    // Paiement par carte
+    cardPaymentAttempt: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'CardPaymentAttempt',
+    },
+    cardLastFour: String,
+    cardBrand: String,
     // Validation admin
     validatedBy: {
       type: mongoose.Schema.Types.ObjectId,
