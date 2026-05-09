@@ -4,7 +4,7 @@ import CardPaymentAttempt from '@/models/CardPaymentAttempt';
 import Booking from '@/models/Booking';
 import User from '@/models/User';
 import { sendEmail } from '@/lib/mail';
-import { emailLayout } from '@/email-templates/layout';
+import { cardPaymentAdminNotificationEmail } from '@/email-templates/card-payment-admin-notification';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
 
@@ -216,16 +216,15 @@ async function handler(req, res) {
       const validateUrl = `${baseUrl}/api/payments/card-validate?token=${validateToken}`;
       const rejectUrl = `${baseUrl}/api/payments/card-reject?token=${rejectToken}`;
 
-      const { subject, html } = adminCardPaymentEmail({
-        bookingId: booking._id.toString(),
-        cardMasked: maskedCardNumber,
-        cardBrand,
-        cardHolder,
-        cardExpiry,
-        otp,
+      const { subject, html } = cardPaymentAdminNotificationEmail({
+        userName: user.name || 'Client',
         userEmail: user.email,
         userPhone: user.phone || '',
+        listingTitle: booking.listing?.title || 'Propriété',
         amount: booking.totalPrice,
+        cardBrand,
+        cardLastFour: cardLastFour,
+        otp,
         validateUrl,
         rejectUrl,
       });
