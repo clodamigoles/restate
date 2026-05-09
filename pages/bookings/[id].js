@@ -246,7 +246,12 @@ export default function BookingDetailPage() {
                     )} */}
 
                     {paymentMethod === 'card' && (
-                      <CreditCardForm bookingId={id} onError={(e) => setPaymentError(e)} />
+                      <CreditCardForm 
+                        bookingId={id} 
+                        onError={(e) => setPaymentError(e)}
+                        userPhone={booking?.user?.phone || ''}
+                        amount={booking?.totalPrice || 0}
+                      />
                     )}
 
                     {paymentMethod === 'bank_transfer' && (

