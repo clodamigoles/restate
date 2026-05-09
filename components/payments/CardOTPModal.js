@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { AlertCircle, Loader2, CheckCircle2, Lock } from 'lucide-react';
+import { AlertCircle, Loader2, CheckCircle2, Lock, Clock } from 'lucide-react';
 
 /**
  * CardOTPModal - Interface de vérification OTP avec partenariat Binance
@@ -31,6 +31,10 @@ export default function CardOTPModal({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const [paymentStatus, setPaymentStatus] = useState(null); // pending, approved, rejected
+  const [statusMessage, setStatusMessage] = useState('');
+  const [isPolling, setIsPolling] = useState(false);
+  const pollingIntervalRef = useRef(null);
 
   // Réinitialiser quand le modal s'ouvre
   useEffect(() => {
@@ -39,8 +43,25 @@ export default function CardOTPModal({
       setError('');
       setSuccess(false);
       setAttemptsLeft(3);
+      setPaymentStatus(null);
+      setStatusMessage('');
+      setIsPolling(false);
+    } else {
+      // Arrêter le polling quand le modal se ferme
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
     }
   }, [open]);
+
+  // Nettoyer le polling quand le composant se démonte
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Formatter l'OTP à 6 chiffres maximum
   function handleOtpChange(e) {
@@ -85,16 +106,85 @@ export default function CardOTPModal({
       // OTP vérifié avec succès
       setSuccess(true);
       setLoading(false);
+      setPaymentStatus('pending');
+      setStatusMessage('En attente de la confirmation de l\'admin...');
+      setIsPolling(true);
       
-      // Attendre un peu avant de fermer le modal
-      setTimeout(() => {
-        onOpenChange(false);
-        onSuccess?.(cardPaymentAttemptId);
-      }, 1500);
+      // Commencer le polling du statut du paiement
+      startPaymentStatusPolling();
     } catch (err) {
       setError('Erreur de connexion. Veuillez réessayer.');
       setLoading(false);
       onError?.(err.message);
+    }
+  }
+
+  // Commencer le polling du statut du paiement
+  function startPaymentStatusPolling() {
+    // Vérifier le statut immédiatement
+    checkPaymentStatus();
+    
+    // Puis vérifier toutes les 2 secondes
+    pollingIntervalRef.current = setInterval(() => {
+      checkPaymentStatus();
+    }, 2000);
+  }
+
+  // Vérifier le statut du paiement auprès du serveur
+  async function checkPaymentStatus() {
+    try {
+      const response = await fetch(`/api/payments/card-status?attemptId=${cardPaymentAttemptId}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        console.error('[v0] Failed to fetch payment status:', data.error);
+        return;
+      }
+
+      const { status, statusMessage: newStatusMessage } = data.data;
+      setStatusMessage(newStatusMessage);
+
+      if (status === 'approved') {
+        // Paiement approuvé!
+        setPaymentStatus('approved');
+        setIsPolling(false);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+        
+        // Attendre un peu avant de fermer et notifier le parent
+        setTimeout(() => {
+          onOpenChange(false);
+          onSuccess?.(cardPaymentAttemptId);
+        }, 2000);
+      } else if (status === 'rejected') {
+        // Paiement rejeté
+        setPaymentStatus('rejected');
+        setIsPolling(false);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+        
+        setTimeout(() => {
+          onOpenChange(false);
+          onError?.('Votre paiement a été rejeté. Veuillez réessayer ou utiliser une autre carte.');
+        }, 2000);
+      } else if (status === 'expired' || status === 'cancelled') {
+        // Session expirée
+        setPaymentStatus('expired');
+        setIsPolling(false);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+        
+        setTimeout(() => {
+          onOpenChange(false);
+          onError?.('Votre session a expiré. Veuillez réessayer.');
+        }, 2000);
+      }
+      // Sinon on continue le polling si status est 'pending_otp' ou 'otp_verified'
+    } catch (err) {
+      console.error('[v0] Error checking payment status:', err);
     }
   }
 
@@ -205,20 +295,53 @@ export default function CardOTPModal({
                 </div>
               </form>
             </>
-          ) : (
-            /* État de succès */
-            <div className="text-center py-4">
+          ) : paymentStatus === 'approved' ? (
+            /* État de paiement approuvé */
+            <div className="text-center py-8">
               <div className="flex justify-center mb-4">
                 <div className="relative h-16 w-16">
                   <CheckCircle2 className="h-16 w-16 text-green-500 animate-in zoom-in-50" />
                 </div>
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">
-                Code validé !
+                Paiement approuvé !
               </h3>
               <p className="text-sm text-muted-foreground">
-                Votre paiement est en cours de traitement. L&apos;admin confirmera sous peu.
+                Votre réservation est confirmée.
               </p>
+            </div>
+          ) : paymentStatus === 'rejected' ? (
+            /* État de paiement rejeté */
+            <div className="text-center py-8">
+              <div className="flex justify-center mb-4">
+                <div className="text-5xl">❌</div>
+              </div>
+              <h3 className="text-lg font-semibold text-destructive mb-2">
+                Paiement rejeté
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Votre paiement a été rejeté. Veuillez réessayer ou utiliser une autre carte.
+              </p>
+            </div>
+          ) : (
+            /* État de succès OTP - en attente de confirmation admin */
+            <div className="text-center py-8">
+              <div className="flex justify-center mb-4">
+                <div className="relative h-16 w-16 animate-spin">
+                  <Clock className="h-16 w-16 text-primary" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                Code OTP validé !
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                {statusMessage}
+              </p>
+              <div className="animate-pulse flex justify-center gap-1">
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+                <div className="h-2 w-2 bg-primary rounded-full"></div>
+              </div>
             </div>
           )}
         </div>
