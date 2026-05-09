@@ -27,7 +27,7 @@ export function bookingConfirmationEmail({ userName, listing, booking, bookingUr
       title: 'Confirmation de réservation',
       preheader: `${isInstant ? 'Votre réservation est confirmée' : 'Demande reçue'} pour ${t(listing.title)}.`,
       content: `
-        <h2>${isInstant ? '🎉 Réservation confirmée !' : 'Demande de réservation reçue'}</h2>
+        <h2>${isInstant ? 'Réservation confirmée !' : 'Demande de réservation reçue'}</h2>
         <p>Bonjour ${userName},</p>
         <p>${isInstant
           ? `Votre réservation pour <strong>${t(listing.title)}</strong> est <strong>confirmée</strong>. Voici le récapitulatif&nbsp;:`
