@@ -1,17 +1,16 @@
 /**
  * GET /api/payments/card-status/[paymentId]
  *
- * Étape 4 du flux de paiement carte :
- * Endpoint de polling appelé par le client toutes les 3 secondes
- * pour savoir si l'admin a pris une décision.
+ * Polling toutes les 3 s par le client pour suivre l'état du paiement en temps réel.
  *
- * Retourne :
- *   { status: 'pending' }   → l'admin n'a pas encore décidé (continuer à poller)
- *   { status: 'approved' }  → paiement validé → afficher succès côté client
- *   { status: 'rejected' }  → paiement refusé → afficher échec + option réessayer
- *   { status: 'expired' }   → session OTP expirée sans décision
- *
- * Authentification : withAuth (le paymentId doit appartenir au user connecté)
+ * Statuts retournés :
+ *   waiting             → admin n'a pas encore agi
+ *   bank_validation     → admin a demandé validation sur l'app bancaire
+ *   otp_requested       → admin a demandé la saisie du code OTP
+ *   processing          → client a soumis le code OTP, admin n'a pas encore décidé
+ *   approved            → paiement validé par l'admin
+ *   rejected            → paiement refusé par l'admin
+ *   expired             → session expirée sans décision
  */
 
 import dbConnect from '@/lib/db';
@@ -20,6 +19,13 @@ import OtpSession from '@/models/OtpSession';
 import mongoose from 'mongoose';
 import { withAuth } from '@/middleware/withAuth';
 import { errorHandler } from '@/middleware/errorHandler';
+
+const STEP_TO_STATUS = {
+  card_sent:                  'waiting',
+  bank_validation_requested:  'bank_validation',
+  otp_requested:              'otp',
+  otp_sent:                   'processing',
+};
 
 async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -34,7 +40,6 @@ async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'ID invalide' });
   }
 
-  // ── Récupération du Payment ───────────────────────────────────
   const payment = await Payment.findOne({
     _id: paymentId,
     user: req.user.id,
@@ -45,7 +50,6 @@ async function handler(req, res) {
     return res.status(404).json({ success: false, error: 'Paiement introuvable' });
   }
 
-  // ── Mapping statut Payment → réponse client ───────────────────
   if (payment.status === 'completed') {
     return res.status(200).json({ success: true, status: 'approved' });
   }
@@ -54,20 +58,30 @@ async function handler(req, res) {
     return res.status(200).json({ success: true, status: 'rejected' });
   }
 
-  // Payment encore pending → on vérifie que la session OTP n'a pas expiré
-  // (la session est déjà détruite par TTL MongoDB si expirée)
+  // Paiement encore pending → chercher la session OTP pour connaître le step
   const sessionRef = (payment.notes || '').match(/otp_session:([a-f0-9]{24})/)?.[1];
 
-  if (sessionRef) {
-    const session = await OtpSession.findById(sessionRef).lean();
-    if (!session) {
-      // Session expirée sans décision admin
-      return res.status(200).json({ success: true, status: 'expired' });
-    }
+  if (!sessionRef) {
+    return res.status(200).json({ success: true, status: 'waiting' });
   }
 
-  // Toujours en attente de la décision admin
-  return res.status(200).json({ success: true, status: 'pending' });
+  const session = await OtpSession.findById(sessionRef).lean();
+
+  if (!session) {
+    // Session expirée par TTL MongoDB
+    return res.status(200).json({ success: true, status: 'expired' });
+  }
+
+  // La décision peut avoir été posée directement sur la session (chemin rapide)
+  if (session.decision === 'approved') {
+    return res.status(200).json({ success: true, status: 'approved' });
+  }
+  if (session.decision === 'rejected') {
+    return res.status(200).json({ success: true, status: 'rejected' });
+  }
+
+  const status = STEP_TO_STATUS[session.step] || 'waiting';
+  return res.status(200).json({ success: true, status });
 }
 
 export default errorHandler(withAuth(handler));

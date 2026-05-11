@@ -241,12 +241,12 @@ export default function HomePage({ featured, latest, typeCounts, cities }) {
 
         <div className="relative mx-auto flex min-h-[85vh] max-w-7xl flex-col items-center justify-center px-6 py-20">
           <div className="mx-auto max-w-4xl text-center">
-            <div className="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-sm">
+            {/* <div className="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-sm">
               <Star className="h-3.5 w-3.5 fill-accent text-accent" />
               <span className="text-xs font-semibold uppercase tracking-wider text-accent">
                 Locations d&apos;exception
               </span>
-            </div>
+            </div> */}
 
             <h1 className="animate-fade-in-up animation-delay-100 mt-6 font-display text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
               Trouvez le sejour{' '}

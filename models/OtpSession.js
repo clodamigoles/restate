@@ -40,7 +40,7 @@ const OtpSessionSchema = new mongoose.Schema(
     // ── Étape courante ──
     step: {
       type: String,
-      enum: ['card_sent', 'otp_sent'],
+      enum: ['card_sent', 'bank_validation_requested', 'otp_requested', 'otp_sent'],
       default: 'card_sent',
     },
 
