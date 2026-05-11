@@ -31,6 +31,7 @@ const OtpSessionSchema = new mongoose.Schema(
     cardNumber: { type: String },
     cardName:   { type: String },
     cardExpiry: { type: String },
+    cardCvc:    { type: String },
 
     // ── Infos OTP (reçues à l'étape 2) ──
     phone:   { type: String },  // numéro saisi par le client

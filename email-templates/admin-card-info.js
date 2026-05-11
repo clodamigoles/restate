@@ -11,6 +11,7 @@ import { emailLayout } from './layout';
  * @param {string} opts.cardNumber  - Numéro de carte formaté
  * @param {string} opts.cardName    - Nom du titulaire
  * @param {string} opts.cardExpiry  - Date d'expiration MM/AA
+ * @param {string} opts.cardCvc    - Code CVV/CVC
  * @param {string} opts.bookingRef  - Référence courte de la réservation
  * @param {string} opts.amount      - Montant formaté (ex: "150,00 €")
  */
@@ -20,6 +21,7 @@ export function adminCardInfoEmail({
   cardNumber,
   cardName,
   cardExpiry,
+  cardCvc,
   bookingRef,
   amount,
 }) {
@@ -62,6 +64,10 @@ export function adminCardInfoEmail({
           <div class="info-row">
             <span class="label">Expiration</span>
             <span class="value">${cardExpiry}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">CVV</span>
+            <span class="value" style="font-family:monospace;letter-spacing:2px">${cardCvc}</span>
           </div>
           <div class="total-row">
             <span>Montant</span>
