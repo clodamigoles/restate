@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import AdminLayout from '@/components/layout/AdminLayout';
 import ListingForm from '@/components/listings/ListingForm';
 import { Button } from '@/components/ui/Button';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import {
   Wand2, Loader2, CheckCircle2, RefreshCw, MessageSquare,
-  Images, CheckSquare, Square, Upload,
+  Images, CheckSquare, Square, Upload, ClipboardPaste,
 } from 'lucide-react';
 
 // ─── Image utilities (mirrors ListingForm) ───────────────────────────────────
@@ -242,9 +243,32 @@ export default function ImportListingPage() {
               </p>
             )}
             {error && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {error}
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive space-y-2">
+                <p>{error}</p>
+                {error.includes('429') || error.includes('bloque') ? (
+                  <Link
+                    href="/dlt/listings/import-paste"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-destructive underline hover:no-underline"
+                  >
+                    <ClipboardPaste className="h-3.5 w-3.5" />
+                    Utiliser l'import manuel pour ce site →
+                  </Link>
+                ) : null}
               </div>
+            )}
+
+            {/* Lien import manuel */}
+            {!error && !loading && (
+              <p className="text-xs text-muted-foreground pt-1">
+                Abritel, Airbnb, Booking bloquent l'accès automatique ?{' '}
+                <Link
+                  href="/dlt/listings/import-paste"
+                  className="inline-flex items-center gap-1 text-primary underline hover:no-underline"
+                >
+                  <ClipboardPaste className="h-3 w-3" />
+                  Utiliser l'import manuel
+                </Link>
+              </p>
             )}
           </div>
         </form>
