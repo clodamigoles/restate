@@ -353,26 +353,66 @@ async function scrapeHandler(req, res) {
   const { url } = req.body;
   if (!url) return res.status(400).json({ success: false, error: 'URL requise' });
 
-  // Fetch HTML avec timeout 15s
+  // Fetch HTML avec timeout 15s et retry sur 429
   let html;
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-      },
-    });
-    clearTimeout(timeout);
-    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-    html = await response.text();
+    const BROWSER_HEADERS = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-User': '?1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Connection': 'keep-alive',
+      'DNT': '1',
+    };
+
+    const fetchWithRetry = async (attempts = 2) => {
+      for (let i = 0; i < attempts; i++) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        try {
+          const response = await fetch(url, {
+            signal: controller.signal,
+            headers: BROWSER_HEADERS,
+            redirect: 'follow',
+          });
+          clearTimeout(timeout);
+
+          if (response.status === 429) {
+            const retryAfter = response.headers.get('Retry-After');
+            const wait = retryAfter ? parseInt(retryAfter) * 1000 : 3000 * (i + 1);
+            if (i < attempts - 1) {
+              await new Promise((r) => setTimeout(r, wait));
+              continue;
+            }
+            throw new Error(
+              `Ce site bloque les accès automatiques (HTTP 429). Abritel, Airbnb et VRBO protègent leurs pages contre le scraping — essayez de copier-coller manuellement les informations.`
+            );
+          }
+
+          if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          return await response.text();
+        } catch (e) {
+          clearTimeout(timeout);
+          if (i < attempts - 1 && e.name !== 'AbortError') continue;
+          throw e;
+        }
+      }
+    };
+
+    html = await fetchWithRetry();
   } catch (e) {
     const msg = e.name === 'AbortError'
-      ? 'La page a mis trop de temps à répondre (timeout 15s)'
+      ? 'La page a mis trop de temps à répondre (timeout 20s)'
       : `Impossible de récupérer la page : ${e.message}`;
     return res.status(422).json({ success: false, error: msg });
   }
