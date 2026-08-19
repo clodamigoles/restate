@@ -1,5 +1,6 @@
 import { withAdminOrAuth } from '@/middleware/withAdminOrAuth';
 import { errorHandler } from '@/middleware/errorHandler';
+import { groqChatJSON, ALL_GROQ_KEYS } from '@/lib/groq';
 
 const VALID_TYPES = [
   'apartment', 'villa', 'studio', 'gite', 'house', 'space',
@@ -175,24 +176,12 @@ Retourne UNIQUEMENT ce JSON :
 { "reviews": [ { "reviewerName": "Prénom Nom", "rating": 8, "comment": "texte en français" } ] }`;
 }
 
-async function generateAdditionalReviews(groqKey, rawJson, needed) {
-  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${groqKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [{ role: 'user', content: buildGenerateReviewsPrompt(rawJson, needed) }],
-      temperature: 0.85,
-      response_format: { type: 'json_object' },
-      max_tokens: 2500,
-    }),
+async function generateAdditionalReviews(rawJson, needed) {
+  const parsed = await groqChatJSON({
+    messages: [{ role: 'user', content: buildGenerateReviewsPrompt(rawJson, needed) }],
+    temperature: 0.85,
+    maxTokens: 2500,
   });
-  const groqData = await groqRes.json();
-  if (!groqRes.ok) throw new Error(groqData.error?.message || `Groq error ${groqRes.status}`);
-  const parsed = JSON.parse(groqData.choices[0].message.content);
   return Array.isArray(parsed.reviews) ? parsed.reviews : [];
 }
 
@@ -430,31 +419,18 @@ async function scrapeHandler(req, res) {
     .replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 14000);
+    .slice(0, 9000);
 
-  const groqKey = process.env.GROQ_API || process.env.GROQ_API_KEY;
-  if (!groqKey) return res.status(500).json({ success: false, error: 'GROQ_API non configurée dans .env.local' });
+  if (!ALL_GROQ_KEYS.length) return res.status(500).json({ success: false, error: 'Aucune clé GROQ configurée dans .env.local (GROQ_API / GROQ_API1-3)' });
 
   // Appel Groq
   let rawJson;
   try {
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${groqKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: buildPrompt(text, url) }],
-        temperature: 0,
-        response_format: { type: 'json_object' },
-        max_tokens: 4500,
-      }),
+    rawJson = await groqChatJSON({
+      messages: [{ role: 'user', content: buildPrompt(text, url) }],
+      temperature: 0,
+      maxTokens: 3500,
     });
-    const groqData = await groqRes.json();
-    if (!groqRes.ok) throw new Error(groqData.error?.message || `Groq error ${groqRes.status}`);
-    rawJson = JSON.parse(groqData.choices[0].message.content);
   } catch (e) {
     return res.status(500).json({ success: false, error: `Erreur IA : ${e.message}` });
   }
@@ -578,7 +554,7 @@ async function scrapeHandler(req, res) {
   if (reviews.length < target) {
     try {
       const needed = target - reviews.length;
-      const generated = await generateAdditionalReviews(groqKey, rawJson, needed);
+      const generated = await generateAdditionalReviews(rawJson, needed);
       const normalizedGenerated = generated
         .filter((r) => r && r.comment)
         .map((r) => ({
